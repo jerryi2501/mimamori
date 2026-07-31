@@ -1,0 +1,333 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ===== デザイントークン（確定 2026-07-30）=====
+   出典: docs/02_デザインガイドライン.md
+   画面側では var(--color-*) を使い、hex を直接書かないこと。
+   夜テーマは html.night で上書きする（下部を参照）。 */
+:root {
+  /* ブランド */
+  --color-primary: #2f6bff;
+  --color-primary-dark: #1e4fd9;
+  --color-primary-soft: #ebf1ff;
+
+  /* 面・テキスト */
+  --color-bg: #ffffff; /* カード・シート・トップバー */
+  --color-bg-secondary: #f5f7fa; /* ページ背景 */
+  --color-bg-muted: #f3f4f6; /* 入力欄・押下時 */
+  --color-text: #1a1d26;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af; /* 古い情報・共有オフ */
+  --color-border: #e5e7eb;
+
+  /* ステータス色（意味を固定：勝手に流用しない） */
+  --status-safe: #22c55e; /* 共有中・到着・電池50%以上 */
+  --status-warning: #f59e0b; /* 電池20〜49%・応答なし */
+  --status-danger: #ef4444; /* SOS・退出・電池20%未満 */
+  --status-idle: #9ca3af; /* 共有オフ・オフライン */
+
+  /* 場所カテゴリ色（セーフゾーン） */
+  --place-home: #16a34a;
+  --place-school: #7c3aed;
+  --place-work: #2563eb;
+  --place-other: #ea580c;
+
+  /* 形状 */
+  --radius: 0.625rem;
+
+  font-family: "Noto Sans JP", "Noto Sans", system-ui, sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+
+  /* ---- shadcn/ui トークン ---- */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.55 0.16 275);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.55 0.16 275);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* ===== 🌙 夜テーマ =====
+   html.night が付いたときだけ上書きされる。
+   時刻に応じて useTimeTheme が <html> に付け外しする（18:00〜5:00 が夜）。
+   ダークは「反転」ではなく作り直す方針: 白枠→背景色、白ボタン→半透明の暗色。 */
+html.night {
+  --color-primary: #4d9fff; /* 暗い背景でも視認できるよう明度を上げる */
+  --color-primary-dark: #2f6bff;
+  --color-primary-soft: rgba(77, 159, 255, 0.14);
+
+  --color-bg: #141519;
+  --color-bg-secondary: #0f1013;
+  --color-bg-muted: #1e2025;
+  --color-text: #f2f4f6;
+  --color-text-secondary: #9ba1a9;
+  --color-text-muted: #6b7078;
+  --color-border: rgba(255, 255, 255, 0.09);
+
+  --status-safe: #34d97a;
+  --status-warning: #fbb040;
+  --status-danger: #ff5a5a;
+  --status-idle: #6b7078;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg-secondary);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Mimamori のトークンを Tailwind のユーティリティとして登録 =====
+   これにより style={{ color: "var(--color-text)" }} と書く代わりに
+   className="text-ink" と書ける。
+
+   なぜこうするか:
+   文字列の中に CSS を書くと、rgb→rgp、var( の閉じ忘れ、items-cnter などの
+   打ち間違いを誰も検出できない。ユーティリティ化すれば Tailwind IntelliSense が
+   補完・検証してくれるため、この種のミスが構造的に発生しなくなる。
+
+   ⚠️ 名前は shadcn の --color-primary 等と衝突しないものにしてある。 */
+@theme inline {
+  /* 面 */
+  --color-surface: var(--color-bg);
+  --color-canvas: var(--color-bg-secondary);
+  --color-subtle: var(--color-bg-muted);
+
+  /* 文字 */
+  --color-ink: var(--color-text);
+  --color-ink-sub: var(--color-text-secondary);
+  --color-ink-muted: var(--color-text-muted);
+
+  /* 線 */
+  --color-line: var(--color-border);
+
+  /* ブランド */
+  --color-brand: var(--color-primary);
+  --color-brand-soft: var(--color-primary-soft);
+
+  /* ステータス */
+  --color-safe: var(--status-safe);
+  --color-warn: var(--status-warning);
+  --color-alert: var(--status-danger);
+  --color-idle: var(--status-idle);
+
+  /* 影 */
+  --shadow-float: 0 2px 8px rgb(0 0 0 / 0.12);
+  --shadow-sheet: 0 -4px 20px rgb(0 0 0 / 0.1);
+  --shadow-pin: 0 3px 8px rgb(0 0 0 / 0.25);
+  --shadow-sos: 0 4px 12px rgb(239 68 68 / 0.4);
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ===== 地図のアバターピン（しずく型） =====
+   Leaflet の divIcon に渡す HTML 用のスタイル。
+   createMemberIcon()（src/components/map/memberIcon.js）と対で使う。
+
+   座標の正確さのため:
+   - コンテナは 52x60px 固定（アバター52 + 尖り8）
+   - iconAnchor を [26, 60] にして「尖りの先端 = 実際の座標」にする
+   - 名前ラベルは position:absolute で外に出し、レイアウトに影響させない */
+
+.mm-pin {
+  position: relative;
+  width: 52px;
+  height: 60px;
+}
+
+.mm-pin__avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid var(--color-bg);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* 下向きの尖り。実際の座標を指す */
+.mm-pin__tail {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--color-bg);
+  filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.2));
+}
+
+/* 名前とバッテリーのラベル */
+.mm-pin__label {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* 共有オフのメンバーは色を落とす */
+.mm-pin.is-off .mm-pin__avatar {
+  filter: grayscale(1);
+  opacity: 0.75;
+}
+/* ⚠️ opacity はアバターだけに掛ける。
+   ピン全体に掛けると白いラベルまで透けて読めなくなる（設計時の失敗例）。 */

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>みまもり - 緊急SOS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2F6BFF',
+                        success: '#22C55E',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        muted: '#9CA3AF',
+                        surface: '#FFFFFF',
+                        background: '#F5F7FA',
+                        textMain: '#1A1D26',
+                        textSub: '#6B7280'
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1.5rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Public Sans", "sans-serif"],
+                        display: ["Public Sans", "sans-serif"],
+                        body: ["Public Sans", "sans-serif"],
+                        label: ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; background-color: #FFFFFF; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+        .glow-red { box-shadow: 0 0 40px rgba(239, 68, 68, 0.4); }
+        .spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-white text-textMain min-h-screen flex flex-col items-center select-none">
+<!-- Top Bar -->
+<div class="w-full flex items-center justify-between px-4 h-14 border-b border-[#E5E7EB] fixed top-0 bg-white z-10 max-w-md">
+<button class="text-textSub font-semibold text-[17px] active:opacity-70 transition-opacity">閉じる</button>
+<span class="font-headline text-[17px] font-semibold invisible">緊急SOS</span>
+<div class="w-[50px]"></div> <!-- Spacer to center the invisible title -->
+</div>
+<!-- Main Content Container -->
+<div class="w-full max-w-md pt-20 pb-8 px-6 flex flex-col items-center flex-grow">
+<!-- Header Text -->
+<div class="text-center mt-4 mb-10">
+<h1 class="text-[22px] font-bold text-textMain mb-2"><span class="text-danger">緊急通報</span>を送信しました</h1>
+<p class="text-textSub text-[14px]">家族4人に通知が届きます</p>
+</div>
+<!-- Center SOS Button Area -->
+<div class="relative flex items-center justify-center w-[220px] h-[220px] mb-12">
+<!-- Progress Ring (SVG) -->
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<!-- Background circle -->
+<circle cx="50" cy="50" fill="none" r="48" stroke="#FEE2E2" stroke-width="2"></circle>
+<!-- Progress circle (3/4 complete) -->
+<circle class="spin-slow" cx="50" cy="50" fill="none" r="48" stroke="#FCA5A5" stroke-dasharray="301.59" stroke-dashoffset="75.4" stroke-width="2"></circle>
+</svg>
+<!-- Solid Red Button -->
+<div class="w-[200px] h-[200px] bg-danger rounded-full flex flex-col items-center justify-center glow-red text-white">
+<span class="material-symbols-outlined text-[48px] mb-2">notifications</span>
+<span class="font-bold text-[20px] tracking-wider">送信中</span>
+</div>
+</div>
+<!-- Location Info -->
+<div class="text-center mb-8 w-full">
+<div class="flex items-center justify-center text-textSub text-[15px] mb-1">
+<span class="material-symbols-outlined text-[18px] mr-1">location_on</span>
+<span>山口県山口市中央 3丁目 1-1 付近</span>
+</div>
+<p class="text-muted text-[12px]">位置情報は5秒ごとに更新されます</p>
+</div>
+<!-- Notified Members Card -->
+<div class="w-full bg-white border border-[#E5E7EB] rounded-lg p-4 mb-auto">
+<h3 class="text-textSub text-[13px] font-semibold mb-3">通知先</h3>
+<div class="flex justify-between items-start px-2">
+<!-- Member 1 -->
+<div class="flex flex-col items-center">
+<div class="relative">
+<img class="w-[44px] h-[44px] rounded-full object-cover border border-[#E5E7EB]" data-alt="A simple, realistic headshot photo of a Japanese mother in her 40s, smiling warmly, plain white background, standard smartphone photo aesthetic, unedited, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDL7S6ZxdcrAKIsnE3f_UDjra3n-1c0ZolV1BoTOCPzNj0BAcZBfsmE1p45-CC0aUHL2SWGQxccdXZVfUntPgXVeEOHYod2u5w38cnF69dT7-OEbFCSdqbAbEhqlX-jkikU8jot4NrwlSt8PrJtP84FMN7Pfqq6lbM1pftWbi-Eljrh39VF_Px7pP87zHNsS58z87zbHLa-Lkg5GEJFQ8e_Wpqm7JcILVisxxkNOk6ejdOlIAWBfRqT_0dE-pEYWPtkAZr-OwiHxbU"/>
+<div class="absolute bottom-0 right-0 bg-white rounded-full p-[2px]">
+<span class="material-symbols-outlined text-success text-[14px] bg-white rounded-full">check_circle</span>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-textMain mt-1">まま</span>
+</div>
+<!-- Member 2 -->
+<div class="flex flex-col items-center">
+<div class="relative">
+<img class="w-[44px] h-[44px] rounded-full object-cover border border-[#E5E7EB]" data-alt="A simple, realistic headshot photo of a Japanese father in his 40s, looking reliable, plain white background, standard smartphone photo aesthetic, unedited, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWNbDzbbyG0fGcjJmIOqcxptIVfVa9twsxi6W3A-iWOf2nIpgneINH9KD3NN0jqN5DZEkhELyVcWm1RmoaZFmX1-UWaAkxAYFnQoyUOZPgIGBKcW4sCHOh9ssqifeFSKJhPnQiW5MiOrxwgkroYP5vfJm_UKUUMewnQ2igPFYY45pSgCdNwTDPdP7EE76MGjz55tEpB5Obfz2NPZOonDbO5ccBCFtEJW9jOLIfEZIMFo2LINy8Sz8SvP4onndvxqwoWtsd2Ykx2EQ"/>
+<div class="absolute bottom-0 right-0 bg-white rounded-full p-[2px]">
+<span class="material-symbols-outlined text-success text-[14px] bg-white rounded-full">check_circle</span>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-textMain mt-1">ぱぱ</span>
+</div>
+<!-- Member 3 -->
+<div class="flex flex-col items-center">
+<div class="relative">
+<img class="w-[44px] h-[44px] rounded-full object-cover border border-[#E5E7EB]" data-alt="A simple, realistic headshot photo of a teenage Japanese girl, casual everyday look, plain white background, standard smartphone photo aesthetic, unedited, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCa12JzZJeGOo7ODz1qcwrHKPymgN5UUJPleCjy7WRpd8RIVjJmhncP9kv-U1lJWgEKxM_uKchDdMlivq6gGdP9G-W31JdoUR-BiwEWvRTT2He_s5UZ6UKSA4nyfeTPHDFTkNfQIuz8oXkFiW9mLkDVM-kYndJSEfCAvHNyDhndHg40cc-Ga0joMaOg-WjF3W5CTcozxIEr9SHhsvZDtcIFR7AvVkDtVTi7sqSE-QnUqTg_7itLDLsQb7bp1WIBX1pARWA05FIWiTs"/>
+<div class="absolute bottom-0 right-0 bg-white rounded-full p-[2px]">
+<span class="material-symbols-outlined text-success text-[14px] bg-white rounded-full">check_circle</span>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-textMain mt-1">えみ</span>
+</div>
+<!-- Member 4 -->
+<div class="flex flex-col items-center">
+<div class="relative">
+<img class="w-[44px] h-[44px] rounded-full object-cover border border-[#E5E7EB]" data-alt="A simple, realistic headshot photo of a young Japanese boy, looking cheerful, plain white background, standard smartphone photo aesthetic, unedited, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyU2AujgRQNFLLGqio_B3kVmSxIrLJz8XJgRc9inxPBco_ZKxfX-Rgp67F8DrircH6W3YfxHTRFwtOzR_8JcPGKgk9lwtpf2EWM5UL3HCaQgzygPDz7Y0mnWT399gJ89S_nrKNPLboiL4SSGAQrrnnVdwZCAgV_Tae6GyXfAMfg39XjSklV76y5lkjSWBAO-gWUW3wBnWq9kiWyliTEh0Uxi20JzxVu5r3J6jQueXh9jkV2-fCaBSaGmm93b47j4ZvjJFYNI0Lrdc"/>
+<div class="absolute bottom-0 right-0 bg-white rounded-full p-[2px]">
+<span class="material-symbols-outlined text-success text-[14px] bg-white rounded-full">check_circle</span>
+</div>
+</div>
+<span class="text-[11px] font-semibold text-textMain mt-1">けん</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Action Area -->
+<div class="w-full max-w-md px-6 pb-8 fixed bottom-0 bg-white">
+<button class="w-full bg-[#FEE2E2] text-danger font-bold text-[16px] py-4 rounded-full active:bg-[#FCA5A5] transition-colors select-none" id="cancelBtn">
+            キャンセル（長押し）
+        </button>
+<p class="text-center text-muted text-[12px] mt-3">誤って押した場合は長押しで取り消せます</p>
+</div>
+<script>
+        // Simple long press interaction simulation for the button
+        const btn = document.getElementById('cancelBtn');
+        let pressTimer;
+        
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('touchstart', startPress);
+        btn.addEventListener('mouseup', endPress);
+        btn.addEventListener('mouseleave', endPress);
+        btn.addEventListener('touchend', endPress);
+
+        function startPress(e) {
+            e.preventDefault();
+            btn.classList.add('bg-[#FCA5A5]', 'scale-95', 'transition-transform');
+            pressTimer = window.setTimeout(() => {
+                alert('キャンセルしました');
+                btn.classList.remove('bg-[#FCA5A5]', 'scale-95');
+            }, 1000);
+        }
+
+        function endPress(e) {
+            clearTimeout(pressTimer);
+            btn.classList.remove('bg-[#FCA5A5]', 'scale-95');
+        }
+    </script>
+</body></html>

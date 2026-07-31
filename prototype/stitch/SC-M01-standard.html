@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>みまもり - マップ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "brand-blue": "#2F6BFF",
+                        "status-green": "#22C55E",
+                        "status-amber": "#F59E0B",
+                        "status-red": "#EF4444",
+                        "status-gray": "#9CA3AF",
+                        "surface": "#FFFFFF",
+                        "surface-bg": "#F5F7FA",
+                        "text-main": "#1A1D26",
+                        "text-sub": "#6B7280",
+                        "border-color": "#E5E7EB"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "display": ["Public Sans", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Map Pin Styles */
+        .map-pin {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -100%);
+            z-index: 10;
+        }
+        
+        .pin-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 9999px;
+            border: 3px solid white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            object-fit: cover;
+            background-color: white;
+        }
+        
+        .pin-tail {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid white;
+            margin-top: -2px;
+        }
+        
+        .pin-label {
+            background-color: white;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #1A1D26;
+            margin-top: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+
+        .pin-offline {
+            filter: grayscale(100%);
+            opacity: 0.8;
+        }
+        
+        /* My Location Dot */
+        .my-location {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .my-location-dot {
+            width: 16px;
+            height: 16px;
+            background-color: #2F6BFF;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+        
+        .my-location-accuracy {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            background-color: rgba(47, 107, 255, 0.15);
+            border: 1px solid rgba(47, 107, 255, 0.3);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        /* Utility */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .pt-safe { padding-top: env(safe-area-inset-top, 20px); }
+        
+        /* Hide scrollbar for sheet */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-surface-bg font-body text-text-main h-screen w-full overflow-hidden flex flex-col relative antialiased">
+<!-- JSON Component: TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white border-b border-[#E5E7EB] pt-safe flex items-center justify-between px-4 h-14" style="box-shadow: none;">
+<button aria-label="Settings" class="text-[#1A1D26] hover:opacity-80 transition-opacity duration-200 w-10 flex items-center justify-start">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<h1 class="font-headline text-lg font-bold text-[#1A1D26] flex-1 text-center">みまもり</h1>
+<button aria-label="Add" class="text-[#1A1D26] hover:opacity-80 transition-opacity duration-200 w-10 flex items-center justify-end">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</header>
+<!-- Map Canvas (Full Screen behind UI) -->
+<main class="absolute inset-0 w-full h-full z-0">
+<!-- Using the placeholder as requested -->
+<img alt="Map Background" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIhfD-yKV941AEqrgsBWpu4IXvmKbla_jnyFMSKGI0UGjao2d5cE1o2_eLfXy5RrWI0UEBTC0Z4KVPa-RveYxkTv5djk-xavr7hYo2_xKm8QMoRSaEp3h_As95lPmjyQGrKlbm72c0qQQzFBOtmGfsaTLEeVJFSexeApviScu4PWL_akEWCIwphfj29eMaA-tXPHOYdK5xJVUatIbN7IOk0QNn7X4N0bkgvzVzSRjT1yNOR3hwjfyu46R4tat2fv0w7CxiqkbzFF4"/>
+<!-- Map Overlay: Avatar Pins -->
+<!-- まま -->
+<div class="map-pin" style="top: 30%; left: 45%;">
+<img alt="まま" class="pin-avatar" data-alt="Portrait photo of a Japanese mother, natural lighting, soft smile, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXnr_3eU3rK8Em6a4dugaLOVhRu2WPAt7yZIfe3w5AGtiiJ-cYM9u4Rl6MAt5KIiZiMahV1crWu_Xf6GLt4By0_u_aRiWsAlB7APzJ7Xa70riVG0c9fTQ8e4lu7Y0whrVKaE7oa7OAfYotDgIbGT5PmmX4RdfTILvPti3qs3HK9R4dxdDjQGqA63dTWzjZETNje180Ibnoh9OhDdkY58pCLDUdPkB1GNacTFoTKk5Kz_f7gO5AgGx2WtWOwVw1C5_wi7orpZZDy2c"/>
+<div class="pin-tail"></div>
+<div class="pin-label">まま ・ 80%</div>
+</div>
+<!-- ぱぱ -->
+<div class="map-pin" style="top: 20%; left: 70%;">
+<img alt="ぱぱ" class="pin-avatar" data-alt="Portrait photo of a Japanese father, professional but casual, natural lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuASq2ZYvHCcNZgosVpzRXv0Dws0U5pgdyB2bNTnG-rJuJsBN0ewSJOQvUoMxc1QUeYL6Kqq4OCaf90eVQWFkfoe4QzbPaF8sx11vepxNHm99s_7oBfhiYuqYMhBoGGHPAcLs9HvKIqAHoKneDTJ1XtbnnxAjoGtxQjsOZ2idPPNM-r_OY6Nz5tiDagO20GhrxP-mtar0u1hKlipLf9PkVkeAtJDYzfQahTtvPF-M0NedfBvLCg4NAka2pxMUuTNRqxkl7cZfDYYYjc"/>
+<div class="pin-tail"></div>
+<div class="pin-label">ぱぱ ・ 60%</div>
+</div>
+<!-- えみ -->
+<div class="map-pin" style="top: 55%; left: 30%;">
+<img alt="えみ" class="pin-avatar" data-alt="Portrait photo of a young Japanese girl, smiling, natural daytime lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN3kY2cQVgmNwFdbu0jh5B24pIb1uDiHIod-VbvwdQyO43beQhMkFZC2-qUG3eFfwi-Dcp0WdDf1ZI_FD0J41_IbuPXxMMuSmT99Uockhl45Sdsx0To6zXzwjEPm4HX34WTYu8GLyWiWF2L-GX49FFk-ZE_-VFfWoNrffFROJzs6DvUwAyFe6TQ9cGaYvaGkgv3yAHa8TBuZ_XpSWHwGl0Tv58jf2EaDOYoAisWusTAbVxh_zatJrLUuhGRVVi7gOh0zyD-JSBe5U"/>
+<div class="pin-tail"></div>
+<div class="pin-label">えみ ・ 90%</div>
+</div>
+<!-- りく -->
+<div class="map-pin" style="top: 45%; left: 65%;">
+<img alt="りく" class="pin-avatar" data-alt="Portrait photo of a young Japanese boy, outdoors, natural lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG_HNS1EcGye9h8ii6lErmk0wLAhR3wzxHaWyhwe8hPWu6qd3jN5BIGe4ABH4ENP4P_mQ5PnPVKpHp4u_OwH0EPEouZM85dp1ZC0ptpEwMZXiQ7j_Mx1Euim0_bSKdckLH_a2zP7Sb5kLVZuSULy5Q9pDiAA2UkJIWeAna6s9ocAfYbAiGpnfiuwRYLTf5o_9QA1wZ5cmW6Z36ZrbGYTZv9UDBK1tTHN3ZPlUcs3KOIjBHY92gP4yTnackLlWOnqklY2KtuVvQxwg"/>
+<div class="pin-tail"></div>
+<div class="pin-label">りく ・ <span class="text-status-red">15%</span></div>
+</div>
+<!-- けん (Offline) -->
+<div class="map-pin pin-offline" style="top: 60%; left: 80%;">
+<img alt="けん" class="pin-avatar" data-alt="Portrait photo of a teenage Japanese boy, neutral expression, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuACeN2KdSsy0ypWmXSCjv_BHD0u6bRAJPgv6SGfueQE0XqMQ-0iOaEFgSHU9uOw82m2Mo7WIMha5uWyXWuBSIlV_nyidrY0RS_w5IO0YXaV90mrVzmL-Y7FCbGvuX8W7V48E6VMAJXiHGhFmuRdkxGD4b48FFeFcGKUcWgZattw4lVCBwgKKW5dElJft7-wchn_oivnAL57C8btme97WGHZMWfNQrrBP_hCSerny0r9ThqAQdXPisEsGNsR8PFmW_PryMrYnh2EU4Q"/>
+<div class="pin-tail"></div>
+<div class="pin-label text-text-sub">けん ・ 共有オフ</div>
+</div>
+<!-- My Location -->
+<div class="my-location" style="top: 50%; left: 50%;">
+<div class="my-location-accuracy"></div>
+<div class="my-location-dot"></div>
+</div>
+</main>
+<!-- Floating Action Buttons (Right Edge) -->
+<div class="absolute right-4 bottom-[40vh] flex flex-col gap-3 z-40 pb-20">
+<button aria-label="SOS" class="w-11 h-11 bg-status-red rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md active:scale-95 transition-transform">
+            SOS
+        </button>
+<button aria-label="Recenter" class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-text-main shadow-md active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[#6B7280]" data-icon="my_location">my_location</span>
+</button>
+<button aria-label="Map Layers" class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-text-main shadow-md active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[#6B7280]" data-icon="layers">layers</span>
+</button>
+<button aria-label="Chat" class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-text-main shadow-md active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[#6B7280]" data-icon="chat_bubble">chat_bubble</span>
+</button>
+</div>
+<!-- Bottom Sheet / Member List -->
+<div class="absolute bottom-16 left-0 w-full bg-white rounded-t-[16px] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 flex flex-col" style="height: 40vh; max-height: 400px;">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-2">
+<div class="w-10 h-1 bg-border-color rounded-full"></div>
+</div>
+<!-- Header -->
+<div class="flex justify-between items-center px-4 pb-2 border-b border-border-color">
+<h2 class="font-headline font-bold text-[17px] text-text-main">家族</h2>
+<button class="text-brand-blue font-semibold text-[15px]">編集</button>
+</div>
+<!-- List Content -->
+<div class="flex-1 overflow-y-auto hide-scrollbar">
+<!-- Member Row: まま -->
+<div class="flex items-center px-4 py-3 border-b border-border-color">
+<img alt="まま" class="w-11 h-11 rounded-full object-cover border border-gray-100" data-alt="Portrait photo of a Japanese mother, natural lighting, soft smile, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO1rGQyTQnYJBwVmJsKWlztnfklapbCTF9Vdrbug5qF_RvQYoE8CQyE2yb0NAjLReu6EEvAW5U3zJFj3j5lmB_9-oX53XQdQ6PwQfhhQTws_dfT6CMWhwn5Can2MAwtInSXGLud8f00TO0OZUj2XPVrFp4f3baVWexx2mOVjW03Nt5X-sHxaHDbg8G2JN78J_hB1-z2D4bjDDoXiNr2jYkL4WrZ0mm-W4R4RC5DaZNNMBTN9BQj4B_tXsp4zJi54mP5QQ7YsR7WjA"/>
+<div class="ml-3 flex-1">
+<div class="font-semibold text-[15px] text-text-main">まま</div>
+<div class="text-[13px] text-text-sub mt-0.5">自宅 ・ たった今</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-[13px] font-medium text-text-main">80%</span>
+<span class="material-symbols-outlined text-status-green text-[20px]" data-icon="battery_full_alt">battery_full_alt</span>
+</div>
+</div>
+<!-- Member Row: ぱぱ -->
+<div class="flex items-center px-4 py-3 border-b border-border-color">
+<img alt="ぱぱ" class="w-11 h-11 rounded-full object-cover border border-gray-100" data-alt="Portrait photo of a Japanese father, professional but casual, natural lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrsYwEV9Y11uH0ZNqJn4_NpVgzkFD12vexopH3mWBubf958htTpzTX0iSmwzhghD-_-dssw-3Hd588XgTIULX3IIzW147zM4CcoTxk68DKW0fYz_BBI8CGPZFYCbvvDigp4GO85GEz80so6wN6F3Wtl_Z4yeyByffx2MJEBvspUQscu1DriZJo9VI1KF0PRxUr64qDXrHs5nwazRt2EkTgN1pMD8mRpb1Ugvjw_LabnimyXXz_goLpoze3NNV_B6Uiaqjt73t9b4o"/>
+<div class="ml-3 flex-1">
+<div class="font-semibold text-[15px] text-text-main">ぱぱ</div>
+<div class="text-[13px] text-text-sub mt-0.5">職場 ・ 5分前</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-[13px] font-medium text-text-main">60%</span>
+<span class="material-symbols-outlined text-status-green text-[20px]" data-icon="battery_5_bar">battery_5_bar</span>
+</div>
+</div>
+<!-- Member Row: えみ -->
+<div class="flex items-center px-4 py-3 border-b border-border-color">
+<img alt="えみ" class="w-11 h-11 rounded-full object-cover border border-gray-100" data-alt="Portrait photo of a young Japanese girl, smiling, natural daytime lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgQHAdJ0oVPIR_h4SWELkKT-9tr5FUokc8WZjd1epQoaSPH4Ioq3O1TTURl6A5Iz5W1YBPA4TttB8PemJtOaafuNt62WblSxABxRyn6_i0YfdfvWOjQDO0T2wGgWE0bLAkvRjb_4vkUItIFwY5_A1RthlEyUFsYuiPlMXRY3DrFD_DTJZtBiCCLTgo-HGf3qegcNODgSYxDO2yTb2HjkJVEE1PFSNGRKBj4MyKOJeseB-Utc_fg3rFYn1PXYiN1rB4IR7OQt7tA4M"/>
+<div class="ml-3 flex-1">
+<div class="font-semibold text-[15px] text-text-main">えみ</div>
+<div class="text-[13px] text-status-gray mt-0.5">学校 ・ 1時間前</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-[13px] font-medium text-text-main">90%</span>
+<span class="material-symbols-outlined text-status-green text-[20px]" data-icon="battery_full_alt">battery_full_alt</span>
+</div>
+</div>
+<!-- Member Row: りく -->
+<div class="flex items-center px-4 py-3 border-b border-border-color">
+<img alt="りく" class="w-11 h-11 rounded-full object-cover border border-gray-100" data-alt="Portrait photo of a young Japanese boy, outdoors, natural lighting, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGRLU3ow-jhgDOB64MjUUGPPbXJ2mexs5KQOIf8ejTmQVwNFzhI69dqjiPcpJOoKmgcPgJgC8D1AbeFl9MAGj4Ob_dXdIbAm-FAPme2nmrZWz-Fy9I_i0qXa04w2H1GC3BA-qOMj9IZeeOjogFiJtavjrTgTJblEkWk5o8mY44tUrsDeb_VoALhozUtrSoFxIeKzYDEQ2gWt5uxJA2_qio_iwVAYYKKB98zbBEgjCNVymnyyQeDNmX_Qo503Mxv3p6rIMNzngfR04"/>
+<div class="ml-3 flex-1">
+<div class="font-semibold text-[15px] text-text-main">りく</div>
+<div class="text-[13px] text-text-sub mt-0.5">🚗 移動中 ・ 2分前</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-[13px] font-medium text-status-red">15%</span>
+<span class="material-symbols-outlined text-status-red text-[20px]" data-icon="battery_1_bar">battery_1_bar</span>
+</div>
+</div>
+<!-- Member Row: けん -->
+<div class="flex items-center px-4 py-3 border-b border-border-color">
+<img alt="けん" class="w-11 h-11 rounded-full object-cover border border-gray-100 grayscale opacity-80" data-alt="Portrait photo of a teenage Japanese boy, neutral expression, plain background, standard app avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF_d3bkyT8kcYOXk0XUJTzMIof-5baU23wtSWtRQWR3xYJlPV87XZQrVizafNXfuJAmVHbZiKltv3fFN_qO4AeC74jkSWrZAeCN0JvPkzIva5Du5uhEoh_tS-5ymaFVPxdjnEtUDdx1vME67Ul-WHBpQKo91ykFOTsuSJlKS6opeYQhNOOBiFMjRlzGvSe3nIjSR54pAwIDxZh8Gxdkn51Rkjk0DhWiJWnbekHfEREgKFoKk3oe3km4COHqqLrW4_Saq1ancjHjX0"/>
+<div class="ml-3 flex-1">
+<div class="font-semibold text-[15px] text-text-main">けん</div>
+<div class="text-[13px] text-status-gray mt-0.5">共有オフ</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-status-gray text-[20px]" data-icon="location_off">location_off</span>
+</div>
+</div>
+</div>
+</div>
+<!-- JSON Component: BottomNavBar -->
+<!-- Maps to intent: "マップ" is active -->
+<nav class="fixed bottom-0 left-0 w-full bg-white border-t border-[#E5E7EB] z-50 h-16 pb-safe flex justify-around items-center" style="box-shadow: none;">
+<!-- Active Tab: マップ -->
+<a class="flex flex-col items-center justify-center text-[#2F6BFF] p-2 hover:bg-slate-50 transition-transform scale-95 w-1/4" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="map" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label text-[10px]">マップ</span>
+</a>
+<!-- Inactive Tab: 場所 -->
+<a class="flex flex-col items-center justify-center text-[#6B7280] p-2 hover:bg-slate-50 transition-transform w-1/4" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="location_on">location_on</span>
+<span class="font-label text-[10px]">場所</span>
+</a>
+<!-- Inactive Tab: 履歴 -->
+<a class="flex flex-col items-center justify-center text-[#6B7280] p-2 hover:bg-slate-50 transition-transform w-1/4" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="history">history</span>
+<span class="font-label text-[10px]">履歴</span>
+</a>
+<!-- Inactive Tab: 設定 -->
+<a class="flex flex-col items-center justify-center text-[#6B7280] p-2 hover:bg-slate-50 transition-transform w-1/4" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="settings">settings</span>
+<span class="font-label text-[10px]">設定</span>
+</a>
+</nav>
+</body></html>

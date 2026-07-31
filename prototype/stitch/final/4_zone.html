@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mimamori - セーフゾーン</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#2F6BFF',
+                            container: '#E0E7FF'
+                        },
+                        on: {
+                            primary: {
+                                container: '#2F6BFF'
+                            }
+                        },
+                        success: '#22C55E',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        surface: '#FFFFFF',
+                        background: '#F5F7FA',
+                        border: '#E5E7EB',
+                        text: {
+                            main: '#1A1D26',
+                            sub: '#6B7280',
+                            muted: '#9CA3AF'
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "display": ["Public Sans", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #F5F7FA;
+            font-family: 'Public Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            padding-top: 56px; /* TopAppBar height */
+            padding-bottom: 64px; /* BottomNavBar height */
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .map-container {
+            height: 35vh;
+            min-height: 250px;
+            position: relative;
+            background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLtf9_tX_65GAeSC1jsXBj_2BXdB1lNOPb0_c7NZYVrcuWgZohiA6pqg-IWxCxnQnL-iGKV2PQkZvnHeYRiz1BPAiSgerrZLvLn1k8-gWG9IcJNmc-eJF8v9CM-tmTmVBwMKRTTOLDs9pSQ2rvzB8xvxOHjv784H-S_zSvH2MHVj--nHeVOhsZJclRwkIbc2kstPaFdJhaHmMxESwdku0jPQlPIhREIv-amOh33YFTlutdSmp-lJJ4qkKw');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Hide scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="text-text-main flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white dark:bg-slate-900 border-b border-[#E5E7EB] flex items-center justify-between px-4 h-14 max-w-full">
+<button class="text-[#1A1D26] hover:bg-gray-100 p-2 rounded-full active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<h1 class="font-headline text-lg font-bold text-[#1A1D26]">セーフゾーン</h1>
+<button class="text-[#1A1D26] hover:bg-gray-100 p-2 rounded-full active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+</header>
+<!-- Map Area -->
+<div class="map-container w-full shrink-0" data-alt="A clean, light-colored map background focusing on a city grid. The map style is minimal, reminiscent of standard Japanese navigation apps, using pale greens for parks, light blue for water, and white for roads. The overall tone is bright and professional.">
+<!-- Home Zone -->
+<div class="absolute top-[30%] left-[20%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-32 h-32 rounded-full border-2 border-dashed border-[#16A34A] bg-[#16A34A] bg-opacity-10 absolute"></div>
+<div class="z-10 flex flex-col items-center">
+<div class="bg-white rounded-full p-1.5 shadow-sm mb-1">
+<span class="material-symbols-outlined text-[#16A34A] text-sm" style="font-variation-settings: 'FILL' 1;">home</span>
+</div>
+<span class="bg-white/90 px-2 py-0.5 rounded-full text-xs font-semibold text-text-main shadow-sm">自宅</span>
+</div>
+</div>
+<!-- School Zone -->
+<div class="absolute top-[60%] left-[70%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-24 h-24 rounded-full border-2 border-dashed border-[#7C3AED] bg-[#7C3AED] bg-opacity-10 absolute"></div>
+<div class="z-10 flex flex-col items-center">
+<div class="bg-white rounded-full p-1.5 shadow-sm mb-1">
+<span class="material-symbols-outlined text-[#7C3AED] text-sm" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<span class="bg-white/90 px-2 py-0.5 rounded-full text-xs font-semibold text-text-main shadow-sm">学校</span>
+</div>
+</div>
+<!-- Work Zone -->
+<div class="absolute top-[20%] left-[80%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-40 h-40 rounded-full border-2 border-dashed border-[#2563EB] bg-[#2563EB] bg-opacity-10 absolute"></div>
+<div class="z-10 flex flex-col items-center">
+<div class="bg-white rounded-full p-1.5 shadow-sm mb-1">
+<span class="material-symbols-outlined text-[#2563EB] text-sm" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<span class="bg-white/90 px-2 py-0.5 rounded-full text-xs font-semibold text-text-main shadow-sm">職場</span>
+</div>
+</div>
+<!-- My Location Dot -->
+<div class="absolute top-[45%] left-[45%] transform -translate-x-1/2 -translate-y-1/2 z-20">
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-md relative">
+<div class="absolute inset-0 rounded-full bg-primary animate-ping opacity-75"></div>
+</div>
+</div>
+</div>
+<!-- Content Area -->
+<main class="flex-1 flex flex-col px-4 pt-4 pb-24 gap-6 bg-background w-full max-w-md mx-auto">
+<!-- Registered Places List -->
+<section>
+<div class="bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-4 border-b border-border hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#16A34A]/10 flex items-center justify-center text-[#16A34A]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+</div>
+<div class="flex flex-col">
+<span class="font-bold text-[15px] text-text-main">自宅</span>
+<span class="text-[10px] font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded-sm inline-block w-fit mt-0.5">有効</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-text-muted">半径</span>
+<span class="font-bold text-sm text-text-main">200 m</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-xl">chevron_right</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-4 border-b border-border hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#7C3AED]/10 flex items-center justify-center text-[#7C3AED]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div class="flex flex-col">
+<span class="font-bold text-[15px] text-text-main">学校</span>
+<span class="text-[10px] font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded-sm inline-block w-fit mt-0.5">有効</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-text-muted">半径</span>
+<span class="font-bold text-sm text-text-main">150 m</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-xl">chevron_right</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-[#2563EB]/10 flex items-center justify-center text-[#2563EB]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<div class="flex flex-col">
+<span class="font-bold text-[15px] text-text-main">職場</span>
+<span class="text-[10px] font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded-sm inline-block w-fit mt-0.5">有効</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-text-muted">半径</span>
+<span class="font-bold text-sm text-text-main">250 m</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-xl">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Timeline Section -->
+<section>
+<div class="flex justify-between items-end mb-3 px-1">
+<h2 class="text-[15px] font-bold text-text-main">ゾーン履歴</h2>
+<a class="text-sm font-semibold text-primary active:opacity-70" href="#">すべて表示</a>
+</div>
+<div class="bg-surface rounded-xl shadow-sm border border-border p-5">
+<div class="relative border-l border-border ml-2 space-y-6">
+<!-- Event 1 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-border border border-white"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-text-main">自宅</span>
+<span class="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">入室</span>
+</div>
+<span class="text-xs text-text-sub font-medium">今日 08:15</span>
+</div>
+</div>
+<!-- Event 2 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-border border border-white"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-text-main">自宅</span>
+<span class="text-[10px] font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-full">退出</span>
+</div>
+<span class="text-xs text-text-sub font-medium">今日 12:45</span>
+</div>
+</div>
+<!-- Event 3 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-border border border-white"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-text-main">学校</span>
+<span class="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">入室</span>
+</div>
+<span class="text-xs text-text-sub font-medium">今日 14:20</span>
+</div>
+</div>
+<!-- Event 4 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-border border border-white"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-text-main">学校</span>
+<span class="text-[10px] font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-full">退出</span>
+</div>
+<span class="text-xs text-text-sub font-medium">今日 16:35</span>
+</div>
+</div>
+<!-- Event 5 -->
+<div class="relative pl-6">
+<div class="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-primary border border-white"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<span class="font-bold text-sm text-text-main">職場</span>
+<span class="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">入室</span>
+</div>
+<span class="text-xs text-primary font-medium">今日 17:05</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Action Area (Fixed above NavBar) -->
+<div class="fixed bottom-[64px] w-full px-4 pb-4 max-w-md left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
+<button class="w-full bg-[#2F6BFF] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-full shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition-transform pointer-events-auto">
+<span class="material-symbols-outlined text-lg">add</span>
+            新しい場所を追加
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-white dark:bg-slate-900 border-t border-[#E5E7EB] flex justify-around items-center h-16 px-2">
+<a class="flex flex-col items-center justify-center text-[#6B7280] hover:bg-gray-50 active:scale-95 transition-transform w-full h-full" href="#">
+<span class="material-symbols-outlined mb-1">map</span>
+<span class="font-label text-[10px]">マップ</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#2F6BFF] font-bold bg-primary-container/20 rounded-xl px-2 py-1 active:scale-95 transition-transform w-full h-full" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-label text-[10px]">場所</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6B7280] hover:bg-gray-50 active:scale-95 transition-transform w-full h-full" href="#">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="font-label text-[10px]">履歴</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#6B7280] hover:bg-gray-50 active:scale-95 transition-transform w-full h-full" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-label text-[10px]">設定</span>
+</a>
+</nav>
+</body></html>

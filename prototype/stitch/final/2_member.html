@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mimamori - Member Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "brand": "#2F6BFF",
+              "success": "#22C55E",
+              "warning": "#F59E0B",
+              "danger": "#EF4444",
+              "muted": "#9CA3AF",
+              "sub": "#6B7280",
+              "surface": "#FFFFFF",
+              "bg": "#F5F7FA",
+              "border": "#E5E7EB",
+              "text-main": "#1A1D26"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Public Sans", "sans-serif"],
+                    "display": ["Public Sans", "sans-serif"],
+                    "body": ["Public Sans", "sans-serif"],
+                    "label": ["Public Sans", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-bg text-text-main h-screen w-screen overflow-hidden flex flex-col relative">
+<!-- Top Map Area (45% height) -->
+<div class="relative h-[45%] w-full">
+<!-- Map Background -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A pale, light-colored street map of a Japanese urban area, styled similar to Google Maps default view but muted. The map features very pale gray-green parks, white roads, and soft pale blue rivers or coastal water. The overall tone is bright, simple, and clean, suitable for a background utility map without distractions. Standard cartographic details like major roads and city blocks are visible in subtle light grays. No dark colors, no high contrast elements." style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLtf9_tX_65GAeSC1jsXBj_2BXdB1lNOPb0_c7NZYVrcuWgZohiA6pqg-IWxCxnQnL-iGKV2PQkZvnHeYRiz1BPAiSgerrZLvLn1k8-gWG9IcJNmc-eJF8v9CM-tmTmVBwMKRTTOLDs9pSQ2rvzB8xvxOHjv784H-S_zSvH2MHVj--nHeVOhsZJclRwkIbc2kstPaFdJhaHmMxESwdku0jPQlPIhREIv-amOh33YFTlutdSmp-lJJ4qkKw')"></div>
+<!-- Floating Back Button -->
+<button class="absolute top-12 left-4 w-11 h-11 bg-surface rounded-full shadow-md flex items-center justify-center z-10 active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined text-sub" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<!-- Center Map Pin -->
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<!-- Speed Badge -->
+<div class="bg-surface rounded-full px-3 py-1 text-xs font-semibold shadow-sm mb-1 whitespace-nowrap flex items-center gap-1">
+<span>🚗</span> 32km/h
+            </div>
+<!-- Avatar Pin -->
+<div class="relative">
+<img alt="りく" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface shadow-md object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApULVJX6Wd1UKUrXNFgREa0hii2jl9JZW_V2AD6OMvYa2GaO3G9OTWxmxtFwPTaGf6lc8ZcY7rRJ0BOL7_z9-OPDO-Cf3nXhaDBtgOOuxPLoAI-6yDRVWYFCHoQF2AN0PIxX9KQuwjkLFr5cLPxY2aq-HkyPAeMd9gA8yxeyE0C9NXcLpJjHspk-pN3kmQTIa9bPK2NrElqkG7FZo5ZsQ1RKpJIjSSenfU-zo1B-xP6rYzCCy70OXTQyPQNvuWdRHxsz0H7jbFKjE"/>
+<!-- Triangle Tail -->
+<div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface filter drop-shadow-sm"></div>
+</div>
+<!-- Battery Pill -->
+<div class="bg-surface rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm mt-3 whitespace-nowrap flex items-center gap-1">
+<span>🔋</span> <span class="text-danger">15%</span>
+</div>
+</div>
+</div>
+<!-- Bottom Sheet (55% height) -->
+<div class="relative h-[55%] w-full bg-surface rounded-t-[16px] shadow-[0_-4px_16px_rgba(0,0,0,0.05)] flex flex-col z-20">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-2">
+<div class="w-12 h-1 bg-border rounded-full"></div>
+</div>
+<div class="flex-1 overflow-y-auto px-5 pb-8 flex flex-col">
+<!-- Header Info -->
+<div class="flex flex-col items-center mt-2 mb-6">
+<img alt="りく" class="w-[72px] h-[72px] rounded-full object-cover mb-3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAV2-0gUkd_SPIyRxT4ImYHVmshuzUn4rtvP9Iq89LnYt9vUzWc88mUlc4esuFliQddTv1gGVA6Wwsba-tvvAcfvlSm2IhIz5S3G_CFKmAGvNF16P2RYbotJ3mOErc1L6YfdP_vbjwnzqguUUp7WLYQfj38xxZ4bzti1p-C4CPyCW3HXBphUBFDLJ8WfEo367qu1G0WsEZNz2EE57ZLv6TBQNSzvqS46nIwwjAB2vjr6po8MZ3KHCLMu7tViLYdwbRcrL55ZK_AEkE"/>
+<h2 class="text-xl font-bold mb-1">りく</h2>
+<p class="text-sub text-[13px] mb-2">みなと通り 3丁目 付近</p>
+<div class="flex items-center gap-3 text-xs text-sub">
+<span class="flex items-center gap-1">📏 2.4km</span>
+<span>・</span>
+<span class="flex items-center gap-1">🕐 2分前</span>
+<span>・</span>
+<span class="flex items-center gap-1">🚗 車</span>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-border w-full mb-6"/>
+<!-- Action Buttons Row -->
+<div class="flex justify-between w-full mb-6 px-2">
+<!-- Button 1 -->
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 bg-bg rounded-2xl flex items-center justify-center group-active:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined text-brand" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</div>
+<span class="text-xs font-semibold">呼び出し</span>
+</button>
+<!-- Button 2 -->
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 bg-bg rounded-2xl flex items-center justify-center group-active:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined text-brand" style="font-variation-settings: 'FILL' 0;">history</span>
+</div>
+<span class="text-xs font-semibold">履歴</span>
+</button>
+<!-- Button 3 -->
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 bg-bg rounded-2xl flex items-center justify-center group-active:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined text-brand" style="font-variation-settings: 'FILL' 0;">directions</span>
+</div>
+<span class="text-xs font-semibold">経路</span>
+</button>
+<!-- Button 4 -->
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 bg-bg rounded-2xl flex items-center justify-center group-active:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined text-brand" style="font-variation-settings: 'FILL' 0;">chat</span>
+</div>
+<span class="text-xs font-semibold text-center leading-tight tracking-tighter">メッセージ</span>
+</button>
+</div>
+<!-- Divider -->
+<hr class="border-border w-full mb-5"/>
+<!-- Settings Row -->
+<div class="flex flex-col gap-1 mb-8">
+<div class="flex items-center justify-between w-full">
+<span class="text-[15px] font-semibold">この人と位置を共有</span>
+<!-- Toggle Switch (ON) -->
+<button class="relative inline-flex h-6 w-11 items-center rounded-full bg-brand transition-colors focus:outline-none">
+<span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition-transform"></span>
+</button>
+</div>
+<p class="text-xs text-sub">オフにすると、相手からあなたの位置が見えなくなります</p>
+</div>
+<!-- Footer Button -->
+<button class="w-full py-3.5 border border-border rounded-xl text-danger font-semibold text-[15px] active:bg-gray-50 transition-colors mt-auto">
+                グループから削除
+            </button>
+</div>
+</div>
+</body></html>

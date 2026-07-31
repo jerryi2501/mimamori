@@ -1,0 +1,16 @@
+# 内部作業メモ・学習ノート（非公開）
+CLAUDE.md
+frontend/learn/
+
+# 依存・ビルド成果物
+node_modules/
+dist/
+
+# 環境変数
+.env
+.env.local
+.env.*.local
+
+# エディタ・OS
+.DS_Store
+*.log

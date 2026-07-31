@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Mimamori - Location History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "brand": {
+            "DEFAULT": "#2F6BFF",
+            "online": "#22C55E",
+            "warning": "#F59E0B",
+            "danger": "#EF4444",
+            "offline": "#9CA3AF"
+          },
+          "surface": {
+            "DEFAULT": "#FFFFFF",
+            "background": "#F5F7FA"
+          },
+          "text": {
+            "main": "#1A1D26",
+            "sub": "#6B7280",
+            "muted": "#9CA3AF"
+          },
+          "border": {
+            "DEFAULT": "#E5E7EB"
+          }
+        },
+        "borderRadius": {
+          "DEFAULT": "0.5rem",
+          "lg": "1rem",
+          "xl": "1.5rem",
+          "full": "9999px"
+        },
+        "fontFamily": {
+          "headline": ["Public Sans", "sans-serif"],
+          "display": ["Public Sans", "sans-serif"],
+          "body": ["Public Sans", "sans-serif"],
+          "label": ["Public Sans", "sans-serif"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Public Sans', sans-serif;
+    background-color: #F5F7FA;
+    color: #1A1D26;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent body scroll, handle scroll in sheet */
+  }
+  
+  /* Map Route Line Simulation */
+  .route-path {
+    stroke-dasharray: 8 4;
+    animation: dash 20s linear infinite;
+  }
+  @keyframes dash {
+    to {
+      stroke-dashoffset: -1000;
+    }
+  }
+
+  /* Safe area padding for mobile */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Custom Scrollbar for Timeline */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #E5E7EB;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body class="h-screen flex flex-col relative overflow-hidden bg-surface-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-gray-800 shadow-sm flex items-center justify-between px-4 h-14 z-50 pt-safe">
+<button class="w-10 h-10 flex items-center justify-center text-text-main active:scale-95 transition-transform hover:opacity-80">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline text-lg font-semibold text-text-main absolute left-1/2 -translate-x-1/2">
+      りくの移動履歴
+    </h1>
+<button class="w-10 h-10 flex items-center justify-center text-text-main active:scale-95 transition-transform hover:opacity-80">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Map Area (Upper 42%) -->
+<div class="absolute top-14 left-0 w-full h-[42%] z-0 bg-gray-100 overflow-hidden">
+<!-- Map Background Image -->
+<img class="w-full h-full object-cover opacity-80" data-alt="A light, pale street map background typical of Japanese mobile navigation apps, using white roads and soft gray-green land. Minimal details, no heavy labels, clean flat aesthetic, daylight mode." src="https://lh3.googleusercontent.com/aida/AP1WRLtf9_tX_65GAeSC1jsXBj_2BXdB1lNOPb0_c7NZYVrcuWgZohiA6pqg-IWxCxnQnL-iGKV2PQkZvnHeYRiz1BPAiSgerrZLvLn1k8-gWG9IcJNmc-eJF8v9CM-tmTmVBwMKRTTOLDs9pSQ2rvzB8xvxOHjv784H-S_zSvH2MHVj--nHeVOhsZJclRwkIbc2kstPaFdJhaHmMxESwdku0jPQlPIhREIv-amOh33YFTlutdSmp-lJJ4qkKw"/>
+<!-- SVG Overlay for Route -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="xMidYMid slice" viewbox="0 0 400 300">
+<!-- Route Line -->
+<path class="opacity-80 route-path" d="M 80 200 Q 120 180 150 120 T 250 80 T 320 140" fill="none" stroke="#2F6BFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"></path>
+<!-- Stop Dots -->
+<circle cx="80" cy="200" fill="#2F6BFF" r="4" stroke="#FFFFFF" stroke-width="2"></circle>
+<circle cx="150" cy="120" fill="#2F6BFF" r="4" stroke="#FFFFFF" stroke-width="2"></circle>
+<circle cx="250" cy="80" fill="#2F6BFF" r="4" stroke="#FFFFFF" stroke-width="2"></circle>
+<!-- Final Avatar Pin -->
+<g transform="translate(320, 140)">
+<!-- Pin Tail -->
+<path d="M -6 -8 L 0 2 L 6 -8 Z" fill="#FFFFFF"></path>
+<!-- Avatar Ring -->
+<circle class="drop-shadow-md" cx="0" cy="-24" fill="#FFFFFF" r="26"></circle>
+<!-- Avatar Image -->
+<image clip-path="url(#avatar-clip)" height="48" href="https://images.unsplash.com/photo-1595152772835-219674b2a8a6?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=128&amp;q=80" preserveaspectratio="xMidYMid slice" width="48" x="-24" y="-48"/>
+<clippath id="avatar-clip">
+<circle cx="0" cy="-24" r="24"></circle>
+</clippath>
+</g>
+</svg>
+</div>
+<!-- Timeline Sheet (Below map) -->
+<div class="absolute bottom-[4.5rem] left-0 w-full h-[calc(58%-4.5rem)] bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.08)] z-10 flex flex-col">
+<!-- Drag Handle / Visual cue -->
+<div class="w-full flex justify-center pt-3 pb-2">
+<div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+</div>
+<!-- Date Header -->
+<div class="px-5 py-3 flex items-center justify-between border-b border-gray-100">
+<button class="flex items-center space-x-1 text-text-main active:scale-95 transition-transform">
+<span class="font-headline text-base font-bold">1月3日(木)</span>
+<span class="material-symbols-outlined text-text-sub text-xl" style="font-variation-settings: 'FILL' 0;">expand_more</span>
+</button>
+<div class="flex space-x-3 text-text-sub">
+<button class="p-1 active:scale-95 transition-transform hover:bg-gray-50 rounded-full">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">chevron_left</span>
+</button>
+<button class="p-1 active:scale-95 transition-transform hover:bg-gray-50 rounded-full opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 0;">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Timeline Scroll Area -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-5 py-4 space-y-0">
+<!-- Entry 1: STAY -->
+<div class="relative flex">
+<!-- Node & Line -->
+<div class="w-12 flex flex-col items-center flex-shrink-0">
+<div class="w-3.5 h-3.5 rounded-full bg-brand border-2 border-white shadow-sm z-10"></div>
+<div class="w-px h-full bg-brand my-1 min-h-[4rem]"></div>
+</div>
+<!-- Content -->
+<div class="flex-1 pb-6 pt-0">
+<div class="text-xs text-text-sub mb-1">07:32 〜 12:58（5時間26分）</div>
+<div class="flex justify-between items-start">
+<div>
+<div class="font-bold text-[15px] text-text-main mb-0.5">自宅</div>
+<div class="text-xs text-text-muted">みなと通り 3丁目</div>
+</div>
+<button class="text-brand p-1.5 rounded-full bg-blue-50 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Entry 2: MOVE -->
+<div class="relative flex">
+<!-- Node & Line -->
+<div class="w-12 flex flex-col items-center flex-shrink-0">
+<div class="w-2.5 h-2.5 rounded-full bg-gray-300 border-2 border-white shadow-sm z-10 mt-1"></div>
+<div class="w-px h-full border-l-2 border-dotted border-gray-300 my-1 min-h-[5rem]"></div>
+</div>
+<!-- Content -->
+<div class="flex-1 pb-6 pt-0">
+<div class="text-xs text-text-sub mb-1">12:58 〜 13:39（41分）</div>
+<div class="flex items-center space-x-2 mb-2">
+<span class="material-symbols-outlined text-text-sub text-[18px]" style="font-variation-settings: 'FILL' 0;">directions_walk</span>
+<div class="font-bold text-[14px] text-text-main">2.7km 移動</div>
+</div>
+<div class="bg-gray-50 rounded-lg p-2.5 text-xs text-text-sub space-y-1.5 ml-1">
+<div class="flex items-center space-x-2">
+<div class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+<span>自宅</span>
+</div>
+<div class="pl-[3px]">
+<div class="w-px h-3 bg-gray-300"></div>
+</div>
+<div class="flex items-center space-x-2">
+<div class="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+<span>学校</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 3: STAY -->
+<div class="relative flex">
+<!-- Node & Line -->
+<div class="w-12 flex flex-col items-center flex-shrink-0">
+<div class="w-3.5 h-3.5 rounded-full bg-brand border-2 border-white shadow-sm z-10"></div>
+<div class="w-px h-full bg-brand my-1 min-h-[4rem]"></div>
+</div>
+<!-- Content -->
+<div class="flex-1 pb-6 pt-0">
+<div class="text-xs text-text-sub mb-1">13:39 〜 14:34（55分）</div>
+<div class="flex justify-between items-start">
+<div>
+<div class="font-bold text-[15px] text-text-main mb-0.5">学校</div>
+<div class="text-xs text-text-muted">さくら大通り 1丁目</div>
+</div>
+<button class="text-brand p-1.5 rounded-full bg-blue-50 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Entry 4: MOVE -->
+<div class="relative flex">
+<!-- Node & Line (End) -->
+<div class="w-12 flex flex-col items-center flex-shrink-0">
+<div class="w-2.5 h-2.5 rounded-full bg-gray-300 border-2 border-white shadow-sm z-10 mt-1"></div>
+</div>
+<!-- Content -->
+<div class="flex-1 pb-2 pt-0">
+<div class="text-xs text-text-sub mb-1">14:34 〜 15:10（36分）</div>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-text-sub text-[18px]" style="font-variation-settings: 'FILL' 0;">directions_car</span>
+<div class="font-bold text-[14px] text-text-main">6.4km 移動</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Bar (Above BottomNavBar) -->
+<div class="absolute bottom-[4.5rem] w-full bg-gray-50 border-t border-gray-200 py-2 px-4 z-20 flex justify-center items-center pb-safe">
+<span class="text-xs text-text-sub font-medium">本日の移動距離 9.1km ・ 滞在 3か所</span>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-50 flex justify-around items-center pt-2 pb-safe px-2 h-[4.5rem]">
+<!-- Tab 1: Map -->
+<button class="flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 tap-highlight-transparent w-full py-1 rounded-lg transition-colors">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">map</span>
+<span class="font-label text-xs">マップ</span>
+</button>
+<!-- Tab 2: Places -->
+<button class="flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 tap-highlight-transparent w-full py-1 rounded-lg transition-colors">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">location_on</span>
+<span class="font-label text-xs">場所</span>
+</button>
+<!-- Tab 3: History (ACTIVE) -->
+<button class="flex flex-col items-center justify-center text-[#2F6BFF] font-medium hover:bg-gray-50 dark:hover:bg-gray-800 tap-highlight-transparent w-full py-1 rounded-lg transition-colors">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label text-xs">履歴</span>
+</button>
+<!-- Tab 4: Settings -->
+<button class="flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 tap-highlight-transparent w-full py-1 rounded-lg transition-colors">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label text-xs">設定</span>
+</button>
+</nav>
+</body></html>

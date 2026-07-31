@@ -1,0 +1,29 @@
+{
+  // ===== 保存時に自動整形（Prettier）=====
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // configPath は指定しない。Prettier は各ファイルから上へ辿って
+  // frontend/.prettierrc を自動で見つける（そのほうが壊れにくい）。
+
+  // ===== Tailwind IntelliSense =====
+  // クラス名の補完・検証を有効にする。打ち間違い（items-cnter 等）を防ぐ。
+  "tailwindCSS.experimental.classRegex": [
+    ["className\\s*=\\s*[\"'`]([^\"'`]*)[\"'`]", "([^\\s]+)"]
+  ],
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+
+  // ===== 文字の見分けやすさ =====
+  // l / 1 / I の取り違えを防ぐため、区別しやすい等幅フォントを優先する。
+  "editor.fontFamily": "'JetBrains Mono', 'Fira Code', 'Cascadia Mono', Consolas, monospace",
+  "editor.fontLigatures": false,
+
+  // 全角スペースや紛らわしい文字を可視化する（日本語UIを扱うため重要）
+  "editor.unicodeHighlight.ambiguousCharacters": true,
+  "editor.unicodeHighlight.invisibleCharacters": true,
+
+  // ===== その他 =====
+  "files.eol": "\n",
+  "editor.tabSize": 2
+}

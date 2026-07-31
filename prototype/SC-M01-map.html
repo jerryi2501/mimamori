@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mimamori — SC-M01 地図（ホーム）</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   Mimamori — SC-M01 地図（ホーム）プロトタイプ
+   デザインガイドライン v1.0 準拠 / 参考: iSharing
+   =================================================================== */
+:root{
+  --brand:#2F6BFF; --brand-dark:#1E4FD9; --brand-light:#EBF1FF;
+  --online:#22C55E; --warn:#F59E0B; --danger:#EF4444; --offline:#9CA3AF;
+  --bg:#F5F7FA; --surface:#FFF; --surface-2:#F3F4F6; --border:#E5E7EB;
+  --text:#1A1D26; --text-sub:#6B7280; --text-mute:#9CA3AF;
+  --r-sheet:20px; --r-card:16px; --r-item:12px;
+  --shadow-float:0 2px 8px rgba(0,0,0,.12);
+  --shadow-sheet:0 -4px 20px rgba(0,0,0,.10);
+  --shadow-pin:0 3px 8px rgba(0,0,0,.25);
+  --font:'Noto Sans JP',-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#e9ecf1;display:flex;flex-direction:column;
+  align-items:center;gap:14px;padding:24px 12px;min-height:100vh;-webkit-font-smoothing:antialiased}
+.caption{font-size:13px;color:#5b6472;font-weight:600}
+
+/* ---- 端末フレーム ---- */
+.phone{width:390px;height:844px;background:var(--surface);border-radius:38px;
+  box-shadow:0 20px 50px rgba(0,0,0,.28);overflow:hidden;position:relative;flex-shrink:0}
+.statusbar{position:absolute;top:0;left:0;right:0;height:50px;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0;
+  font-size:14px;font-weight:600;color:var(--text);pointer-events:none}
+
+/* ================= 地図 ================= */
+.map{position:absolute;inset:0;background:#F2F2F0;overflow:hidden}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* ---- アバターピン ---- */
+.pin{position:absolute;z-index:20;cursor:pointer;transform:translate(-50%,-100%);
+  animation:pop .35s cubic-bezier(.34,1.56,.64,1) backwards}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-100%) scale(.8)}}
+.pin .ava{width:56px;height:56px;border-radius:50%;border:3px solid #fff;
+  box-shadow:var(--shadow-pin);display:grid;place-items:center;
+  font-size:22px;font-weight:700;color:#fff;position:relative}
+.pin .ava::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+  border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid #fff}
+/* ステータスリング */
+.pin.on   .ava{box-shadow:var(--shadow-pin),0 0 0 3px var(--online)}
+.pin.off  .ava{box-shadow:var(--shadow-pin),0 0 0 3px var(--offline);filter:saturate(.5)}
+.pin.sos  .ava{box-shadow:var(--shadow-pin),0 0 0 3px var(--danger);animation:sosPulse 1s infinite}
+@keyframes sosPulse{50%{box-shadow:var(--shadow-pin),0 0 0 8px rgba(239,68,68,.35)}}
+/* バッジ */
+.badge{position:absolute;left:50%;transform:translateX(-50%);background:#fff;
+  border-radius:999px;padding:3px 8px;font-size:11px;font-weight:600;
+  box-shadow:var(--shadow-float);white-space:nowrap;display:flex;align-items:center;gap:3px}
+.badge.top{bottom:calc(100% + 6px)}
+.badge.bot{top:calc(100% + 12px)}
+.badge.g{color:var(--online)} .badge.w{color:var(--warn)} .badge.d{color:var(--danger)}
+/* 自分の位置 */
+.me{position:absolute;z-index:15;transform:translate(-50%,-50%)}
+.me .dot{width:18px;height:18px;border-radius:50%;background:var(--brand);
+  border:3px solid #fff;box-shadow:var(--shadow-pin)}
+.me .acc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:80px;height:80px;border-radius:50%;background:rgba(47,107,255,.15);
+  border:1px solid rgba(47,107,255,.3);animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.15);opacity:.7}}
+
+/* ================= フローティングボタン ================= */
+.fabs{position:absolute;z-index:30;display:flex;flex-direction:column;gap:10px}
+.fabs.left{left:14px;top:64px} .fabs.right{right:14px;top:64px}
+.fab{width:44px;height:44px;border-radius:50%;background:var(--surface);border:none;
+  box-shadow:var(--shadow-float);display:grid;place-items:center;font-size:20px;
+  cursor:pointer;transition:transform .15s;color:var(--text)}
+.fab:active{transform:scale(.92)}
+.fab.sos{color:var(--danger);font-size:12px;font-weight:800;letter-spacing:-.02em}
+
+/* ================= 通知トースト ================= */
+.toast{position:absolute;top:56px;left:14px;right:14px;z-index:35;background:#fff;
+  border-radius:var(--r-card);box-shadow:0 4px 16px rgba(0,0,0,.16);
+  padding:11px 14px;display:flex;align-items:center;gap:11px;
+  animation:drop .5s cubic-bezier(.34,1.4,.64,1) 1.2s backwards}
+@keyframes drop{from{opacity:0;transform:translateY(-24px)}}
+.toast .ta{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.toast .tb{min-width:0}
+.toast .app{font-size:10px;color:var(--brand);font-weight:700}
+.toast .msg{font-size:13px;color:var(--text);font-weight:500;line-height:1.35}
+
+/* ================= ボトムシート ================= */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:50;background:var(--surface);
+  border-radius:var(--r-sheet) var(--r-sheet) 0 0;box-shadow:var(--shadow-sheet);
+  height:44%;display:flex;flex-direction:column;transition:height .3s cubic-bezier(.34,1.3,.64,1)}
+.sheet.big{height:82%}
+.handle{padding:9px 0 6px;display:grid;place-items:center;cursor:grab;flex-shrink:0}
+.handle i{width:36px;height:4px;border-radius:999px;background:var(--text-mute);display:block}
+.sh-head{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 12px;flex-shrink:0}
+.sh-head h2{font-size:17px;font-weight:700;display:flex;align-items:center;gap:5px}
+.sh-head h2 span{font-size:12px;color:var(--text-mute)}
+.sh-add{width:32px;height:32px;border-radius:50%;background:var(--brand-light);border:none;
+  color:var(--brand);font-size:20px;cursor:pointer;display:grid;place-items:center;font-weight:400}
+.mlist{flex:1;overflow-y:auto;padding:0 12px 20px}
+
+/* ---- メンバー項目 ---- */
+.mem{display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:var(--r-item);
+  cursor:pointer;transition:background .15s}
+.mem:active{background:var(--surface-2)}
+.mem-av{position:relative;flex-shrink:0}
+.mem-av .c{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:17px}
+.mem-av .odot{position:absolute;top:0;left:0;width:11px;height:11px;border-radius:50%;
+  border:2px solid #fff}
+.mem-av .odot.on{background:var(--online);animation:beat 2s infinite}
+.mem-av .odot.off{background:var(--offline)}
+@keyframes beat{50%{box-shadow:0 0 0 4px rgba(34,197,94,.3)}}
+.mem-av .bat{position:absolute;bottom:-2px;right:-3px;background:#fff;border-radius:999px;
+  padding:1px 4px;font-size:9px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.bat.g{color:var(--online)} .bat.w{color:var(--warn)} .bat.d{color:var(--danger)}
+.mem-b{flex:1;min-width:0}
+.mem-n{font-size:15px;font-weight:600;color:var(--text)}
+.mem-m{font-size:12px;color:var(--text-sub);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mem-m .stale{color:var(--text-mute)}
+.mem-c{color:var(--text-mute);font-size:18px;flex-shrink:0}
+
+/* 自分の行 */
+.mem.self{background:var(--brand-light)}
+.mem.self .mem-n::after{content:'あなた';font-size:10px;font-weight:600;color:var(--brand);
+  background:#fff;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<div class="caption">SC-M01 地図（ホーム）— タップで詳細シート / ハンドルで展開</div>
+
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+
+  <!-- ============ 地図 ============ -->
+  <div class="map">
+    <svg viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice">
+      <rect width="390" height="844" fill="#F2F2F0"/>
+      <!-- 公園 -->
+      <rect x="18" y="150" width="120" height="115" rx="10" fill="#E3EBDA"/>
+      <rect x="245" y="560" width="135" height="150" rx="10" fill="#E3EBDA"/>
+      <!-- 川 -->
+      <path d="M-10 470 Q110 440 195 495 T400 460 L400 520 Q290 560 195 552 T-10 528 Z" fill="#CBDDEC"/>
+      <!-- 道路（白） -->
+      <g stroke="#fff" fill="none" stroke-linecap="round">
+        <path d="M0 300 H390" stroke-width="18"/>
+        <path d="M0 640 H390" stroke-width="18"/>
+        <path d="M95 0 V844" stroke-width="16"/>
+        <path d="M275 0 V844" stroke-width="16"/>
+        <path d="M0 110 H390" stroke-width="10"/>
+        <path d="M0 760 H390" stroke-width="10"/>
+        <path d="M185 0 V844" stroke-width="9"/>
+        <path d="M345 110 V760" stroke-width="9"/>
+        <path d="M30 300 L30 640" stroke-width="7"/>
+      </g>
+      <!-- 建物 -->
+      <g fill="#E8E8E5">
+        <rect x="205" y="130" width="52" height="42" rx="3"/>
+        <rect x="205" y="196" width="52" height="70" rx="3"/>
+        <rect x="300" y="150" width="34" height="55" rx="3"/>
+        <rect x="115" y="330" width="55" height="48" rx="3"/>
+        <rect x="115" y="392" width="55" height="42" rx="3"/>
+        <rect x="205" y="330" width="58" height="60" rx="3"/>
+        <rect x="45" y="672" width="42" height="52" rx="3"/>
+        <rect x="115" y="672" width="55" height="52" rx="3"/>
+        <rect x="300" y="330" width="36" height="90" rx="3"/>
+      </g>
+      <!-- 通り名 -->
+      <g font-family="Noto Sans JP" font-size="9" fill="#A8ADB5">
+        <text x="12" y="295">みなと通り</text>
+        <text x="12" y="635">さくら大通り</text>
+        <text x="100" y="806" transform="rotate(-90 100 806)">中央通り</text>
+      </g>
+    </svg>
+
+    <!-- ---- 自分の位置 ---- -->
+    <div class="me" style="left:186px;top:445px;">
+      <div class="acc"></div><div class="dot"></div>
+    </div>
+
+    <!-- ---- メンバーピン ---- -->
+    <div class="pin on" style="left:112px;top:262px;animation-delay:.05s">
+      <div class="badge top">こうた</div>
+      <div class="ava" style="background:linear-gradient(140deg,#60A5FA,#3B82F6)">こ</div>
+      <div class="badge bot g">🔋 82%</div>
+    </div>
+
+    <div class="pin on" style="left:295px;top:352px;animation-delay:.15s">
+      <div class="badge top">🚗 30km/h</div>
+      <div class="ava" style="background:linear-gradient(140deg,#F472B6,#EC4899)">さ</div>
+      <div class="badge bot w">🔋 41%</div>
+    </div>
+
+    <div class="pin off" style="left:78px;top:700px;animation-delay:.25s">
+      <div class="badge top">たけし</div>
+      <div class="ava" style="background:linear-gradient(140deg,#A78BFA,#8B5CF6)">た</div>
+      <div class="badge bot d">🔋 12%</div>
+    </div>
+  </div>
+
+  <!-- ============ フローティングボタン ============ -->
+  <div class="fabs left">
+    <button class="fab">☰</button>
+    <button class="fab">⤴</button>
+    <button class="fab sos">SOS</button>
+  </div>
+  <div class="fabs right">
+    <button class="fab">◎</button>
+    <button class="fab">💬</button>
+    <button class="fab">⧉</button>
+  </div>
+
+  <!-- ============ 通知トースト ============ -->
+  <div class="toast">
+    <div class="ta" style="background:linear-gradient(140deg,#60A5FA,#3B82F6)">こ</div>
+    <div class="tb">
+      <div class="app">Mimamori</div>
+      <div class="msg">こうた 山田が<b>家を出ました</b></div>
+    </div>
+  </div>
+
+  <!-- ============ ボトムシート ============ -->
+  <div class="sheet" id="sheet">
+    <div class="handle" onclick="document.getElementById('sheet').classList.toggle('big')"><i></i></div>
+    <div class="sh-head">
+      <h2>友だち <span>⌄</span></h2>
+      <button class="sh-add">＋</button>
+    </div>
+    <div class="mlist">
+
+      <div class="mem self">
+        <div class="mem-av">
+          <div class="c" style="background:linear-gradient(140deg,#34D399,#10B981)">ゆ</div>
+          <div class="odot on"></div>
+          <div class="bat g">76</div>
+        </div>
+        <div class="mem-b">
+          <div class="mem-n">ゆうき</div>
+          <div class="mem-m">中央区 · 今</div>
+        </div>
+        <div class="mem-c">›</div>
+      </div>
+
+      <div class="mem">
+        <div class="mem-av">
+          <div class="c" style="background:linear-gradient(140deg,#60A5FA,#3B82F6)">こ</div>
+          <div class="odot on"></div>
+          <div class="bat g">82</div>
+        </div>
+        <div class="mem-b">
+          <div class="mem-n">こうた 山田</div>
+          <div class="mem-m">みなと通り · 今</div>
+        </div>
+        <div class="mem-c">›</div>
+      </div>
+
+      <div class="mem">
+        <div class="mem-av">
+          <div class="c" style="background:linear-gradient(140deg,#F472B6,#EC4899)">さ</div>
+          <div class="odot on"></div>
+          <div class="bat w">41</div>
+        </div>
+        <div class="mem-b">
+          <div class="mem-n">さくら 佐藤</div>
+          <div class="mem-m">🚗 移動中 · 2分前</div>
+        </div>
+        <div class="mem-c">›</div>
+      </div>
+
+      <div class="mem">
+        <div class="mem-av">
+          <div class="c" style="background:linear-gradient(140deg,#A78BFA,#8B5CF6)">た</div>
+          <div class="odot off"></div>
+          <div class="bat d">12</div>
+        </div>
+        <div class="mem-b">
+          <div class="mem-n">たけし 高橋</div>
+          <div class="mem-m"><span class="stale">さくら大通り · 1時間前</span></div>
+        </div>
+        <div class="mem-c">›</div>
+      </div>
+
+      <div class="mem">
+        <div class="mem-av">
+          <div class="c" style="background:linear-gradient(140deg,#FBBF24,#F59E0B)">し</div>
+          <div class="odot off"></div>
+        </div>
+        <div class="mem-b">
+          <div class="mem-n">しんじ 中村</div>
+          <div class="mem-m"><span class="stale">共有オフ</span></div>
+        </div>
+        <div class="mem-c">›</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html lang="ja"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>みまもり</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { DEFAULT: '#2F6BFF' },
+                        success: { DEFAULT: '#22C55E' },
+                        warning: { DEFAULT: '#F59E0B' },
+                        danger: { DEFAULT: '#EF4444' },
+                        surface: { DEFAULT: '#FFFFFF' },
+                        background: { DEFAULT: '#F5F7FA' },
+                        border: { DEFAULT: '#E5E7EB' },
+                        textMain: { DEFAULT: '#1A1D26' },
+                        textSub: { DEFAULT: '#6B7280' },
+                        textMuted: { DEFAULT: '#9CA3AF' }
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        lg: "1rem",
+                        xl: "1.5rem",
+                        full: "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Public Sans", "sans-serif"],
+                        display: ["Public Sans", "sans-serif"],
+                        body: ["Public Sans", "sans-serif"],
+                        label: ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; background-color: #F5F7FA; overscroll-behavior: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .map-container { height: calc(100vh - 3.5rem - 4rem); } /* Total height minus top bar and bottom nav */
+    </style>
+</head>
+<body class="text-textMain h-screen w-screen overflow-hidden flex flex-col relative">
+<!-- TopAppBar -->
+<header class="bg-surface border-b border-border w-full top-0 sticky flex justify-between items-center px-4 h-14 z-50 transition-opacity duration-200">
+<button class="hover:opacity-80 text-textSub p-2 flex items-center justify-center">
+<span aria-label="settings" class="material-symbols-outlined text-2xl">settings</span>
+</button>
+<h1 class="font-headline text-lg font-bold text-textMain tracking-tight">みまもり</h1>
+<button class="hover:opacity-80 text-textSub p-2 flex items-center justify-center">
+<span aria-label="add" class="material-symbols-outlined text-2xl">add</span>
+</button>
+</header>
+<!-- Main Content Area (Map + Sheet) -->
+<main class="flex-1 relative w-full flex flex-col map-container">
+<!-- Map Background -->
+<div class="absolute inset-0 z-0">
+<img alt="Map" class="w-full h-full object-cover" data-alt="A light, pale street map background resembling Google Maps or CARTO Positron. Soft gray-green land, white roads, soft blue water. Plain Japanese utility style, no vibrant colors, very muted and functional for a family location sharing app." src="https://lh3.googleusercontent.com/aida/AP1WRLtf9_tX_65GAeSC1jsXBj_2BXdB1lNOPb0_c7NZYVrcuWgZohiA6pqg-IWxCxnQnL-iGKV2PQkZvnHeYRiz1BPAiSgerrZLvLn1k8-gWG9IcJNmc-eJF8v9CM-tmTmVBwMKRTTOLDs9pSQ2rvzB8xvxOHjv784H-S_zSvH2MHVj--nHeVOhsZJclRwkIbc2kstPaFdJhaHmMxESwdku0jPQlPIhREIv-amOh33YFTlutdSmp-lJJ4qkKw"/>
+</div>
+<!-- Map Layer (Pins & Elements) - Visible top 60% -->
+<div class="relative z-10 w-full h-[60%] pointer-events-none">
+<!-- My Location Dot -->
+<div class="absolute top-[50%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+<div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center relative animate-pulse">
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-surface shadow-sm relative z-10"></div>
+</div>
+</div>
+<!-- Pin 1: まま -->
+<div class="absolute top-[15%] left-[20%] transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto">
+<div class="relative flex flex-col items-center pb-[8px]">
+<img alt="まま" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface object-cover shadow-md z-10" data-alt="A simple, ordinary portrait photo of a middle-aged Japanese woman smiling warmly. Plain background, natural lighting, trustworthy family member style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_psKI53BltQm6re7ZyJqRd9X1mAe5J__Tro22_5rU8veUw2mlD3tCFdSjyWWgbMEoC8PL3ZNgzXCUkTl5ERyceJpRm1zlWqJFXdO7qqg0uxIKBqfcvk9umhk7kv8sSA9PLhtQvw721lEYMYUspnYqvRrCw58UJ4OqMHjROosScCyJwvCXxCJGNXq8XMmEu9rNTyUJP0FrY5oP1rZSYbofbIDMmqLr-9EXvCrAA7kzjz0m-BL6sYOx1KxTi9oKoD2Zua9RplphP2k"/>
+<!-- Tail -->
+<div class="absolute bottom-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface drop-shadow-md z-0"></div>
+</div>
+<div class="bg-surface text-textMain text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm mt-0.5 flex items-center space-x-1 whitespace-nowrap">
+<span>まま</span><span>・</span><span>80%</span>
+</div>
+</div>
+<!-- Pin 2: ぱぱ -->
+<div class="absolute top-[25%] left-[60%] transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto">
+<div class="relative flex flex-col items-center pb-[8px]">
+<img alt="ぱぱ" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface object-cover shadow-md z-10" data-alt="A simple, ordinary portrait photo of a middle-aged Japanese man looking friendly. Plain background, natural lighting, standard utility app profile picture style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAYigw108Rg4hdQUnWlHYD8FZkNAa3xxA67Wtlcxo6htomWJAmjgSgre931ryEktXZ5M5EEzfrh9-D0p9BMics5iTHCoOH3qpM501JXo6MMvrdGRJWm8ukwo_yzgvXPp6ma6VKhV9Tf1ivmUdQOs0z5znrjOW4yUzqbDkQxUChknHH2JAYWyffT3Hhy8XVwI1gnssi4LS_heJKY2M9WjOngvnKcz_xy1bzY_rpwIFC-rr9WuAtUASdC2pgRHMvneIZkrTxcQkgN-8"/>
+<div class="absolute bottom-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface drop-shadow-md z-0"></div>
+</div>
+<div class="bg-surface text-textMain text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm mt-0.5 flex items-center space-x-1 whitespace-nowrap">
+<span>ぱぱ</span><span>・</span><span>60%</span>
+</div>
+</div>
+<!-- Pin 3: えみ -->
+<div class="absolute top-[55%] left-[15%] transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto">
+<div class="relative flex flex-col items-center pb-[8px]">
+<img alt="えみ" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface object-cover shadow-md z-10" data-alt="A simple, ordinary portrait photo of a young Japanese teenage girl with a casual expression. Plain background, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDp-PkZ-f_cAiEQWRQDGgQaVUMWoTB1ygazTyPFOtJZO0dDfmizSOOXecgIN0ADBoyuK1vLtMR1PGFfpaMrt72Mo9aoAoNQKH3ViC68WGXSvkzGNliqclTB4zUjW9DmSCc0WZ8HndmfCK5HPCLLTL5uv-FHHPYsRl_spUHwyTS19LwsURy5BsuUIMCpq6ebJVoc_mqjalcbA9ToDPJeecB8ugTL77h942ALCJrkN6Z4HkB3rOLfTXYrshoFIxyINtQoCe94y9-I1m0"/>
+<div class="absolute bottom-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface drop-shadow-md z-0"></div>
+</div>
+<div class="bg-surface text-textMain text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm mt-0.5 flex items-center space-x-1 whitespace-nowrap">
+<span>えみ</span><span>・</span><span>90%</span>
+</div>
+</div>
+<!-- Pin 4: りく (Red Battery) -->
+<div class="absolute top-[75%] left-[55%] transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto">
+<div class="relative flex flex-col items-center pb-[8px]">
+<img alt="りく" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface object-cover shadow-md z-10" data-alt="A simple, ordinary portrait photo of a young Japanese boy smiling. Plain background, natural lighting, typical family app avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBs6PGzOxkG_iHmiWGgHKMF1dANvWO49f998yTqLlFI6P6xKiwq6fAfNhTYMN0oU3baj-wNPpkVusGJYjQMAn_HmJ2eUexmU-g571EDr9VtLfukvvlJh75AlLXmA0hpQQpNwl3BN6lzvltbcwzOLCRRtVb1d_b7I-sgZoKYQG7Ly5D4Pvf474Ok4tSm4EgWBodi9p13_crb0nVGuekMnSp1lfuPMxVha9kvPxjLoy5Eij20P6nQtLukwCPDRSjQu1UyUC8agizSpWk"/>
+<div class="absolute bottom-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface drop-shadow-md z-0"></div>
+</div>
+<div class="bg-surface text-textMain text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm mt-0.5 flex items-center space-x-1 whitespace-nowrap">
+<span>りく</span><span>・</span><span class="text-danger">15%</span>
+</div>
+</div>
+<!-- Pin 5: けん (Offline) -->
+<div class="absolute top-[80%] left-[25%] transform -translate-x-1/2 -translate-y-full flex flex-col items-center pointer-events-auto">
+<div class="relative flex flex-col items-center pb-[8px]">
+<img alt="けん" class="w-[52px] h-[52px] rounded-full border-[3px] border-surface object-cover shadow-md z-10 grayscale" data-alt="A simple, ordinary portrait photo of an older Japanese man, but the image is desaturated and grayed out to indicate being offline or not sharing location." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkxSL7Lzz25Q00wV8xFuDJ-4PC9ramQzNUqKF6PWtG1LVwTRPED58Py8V_CMZ9dzXLlEBUzX5ajn-jprrqGvZYjCLnnHobyTzHBvOOUfR_rkjrQ9qnKmhI0AyBLKZjOmx70zcQkpWMiP6xCJ9ojoUXk_ZMs4-GIj2O6eiOuBU6tAlF4DtV1Y-VgWiamS6FAvyelp_kty0pR5m6-girgR3jHJXxI1TDCZWoJH1q_0xCaeAw6Jrrt8XVvPTlFiMS6EdVwyX-taWx29U"/>
+<div class="absolute bottom-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-surface drop-shadow-md z-0"></div>
+</div>
+<div class="bg-surface text-textMuted text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm mt-0.5 flex items-center space-x-1 whitespace-nowrap">
+<span>けん</span><span>・</span><span>共有オフ</span>
+</div>
+</div>
+<!-- Floating Action Buttons -->
+<div class="absolute top-4 right-4 flex flex-col space-y-3 pointer-events-auto">
+<button class="w-11 h-11 bg-danger rounded-full shadow-md flex items-center justify-center hover:opacity-90 transition-opacity">
+<span class="text-surface font-bold text-sm tracking-widest">SOS</span>
+</button>
+<button class="w-11 h-11 bg-surface rounded-full shadow-md flex items-center justify-center hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-textSub text-xl">my_location</span>
+</button>
+<button class="w-11 h-11 bg-surface rounded-full shadow-md flex items-center justify-center hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-textSub text-xl">layers</span>
+</button>
+<button class="w-11 h-11 bg-surface rounded-full shadow-md flex items-center justify-center hover:bg-background transition-colors">
+<span class="material-symbols-outlined text-textSub text-xl">chat</span>
+</button>
+</div>
+</div>
+<!-- Bottom Sheet Layer -->
+<div class="absolute bottom-0 left-0 w-full h-[40%] bg-surface rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 flex flex-col">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-3 pb-2 cursor-grab">
+<div class="w-10 h-1 bg-border rounded-full"></div>
+</div>
+<!-- Sheet Header -->
+<div class="flex justify-between items-center px-5 pb-3">
+<h2 class="font-headline font-bold text-lg text-textMain">家族</h2>
+<button class="text-primary font-semibold text-sm hover:opacity-80">編集</button>
+</div>
+<!-- Member List -->
+<div class="flex-1 overflow-y-auto hide-scrollbar px-4 pb-4">
+<div class="flex flex-col space-y-0">
+<!-- Row 1: まま -->
+<div class="flex items-center py-3 border-b border-border/50">
+<img alt="まま" class="w-11 h-11 rounded-full object-cover mr-4 shadow-sm" data-alt="A simple, ordinary portrait photo of a middle-aged Japanese woman smiling warmly. Plain background, natural lighting, trustworthy family member style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAggm876IYT36WcYdPySFUCy0sZQ-oSS1EGmE0SdVB01o7j10iN6v7ChrKsfugD0wvR1_5PRGedgSKLW7_H3DNzTelUVw9OGPq2q9d2WlWERWMQ5hN9Lewfs1xG7RNEaQfRd0JRXxKw-RUx4SSZ_pHIcf_RbNVFv5MHgXt27EGAdONJ6LYYZe-N1CC4U33A5RN-IDXL3omuwBTtthYjOJCeDi0epfIu4DOF7aK52f9fsQG2TPpHaMUnu6-auWC39ug3yhdJuXBhIgo"/>
+<div class="flex-1 flex flex-col justify-center">
+<span class="font-semibold text-[15px] text-textMain leading-tight">まま</span>
+<span class="text-xs text-textSub mt-0.5">自宅 ・ たった今</span>
+</div>
+<div class="flex items-center text-success ml-2">
+<span class="text-sm font-semibold mr-1">80%</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">battery_full</span>
+</div>
+</div>
+<!-- Row 2: ぱぱ -->
+<div class="flex items-center py-3 border-b border-border/50">
+<img alt="ぱぱ" class="w-11 h-11 rounded-full object-cover mr-4 shadow-sm" data-alt="A simple, ordinary portrait photo of a middle-aged Japanese man looking friendly. Plain background, natural lighting, standard utility app profile picture style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTfKfEBNTbQm66znRbrlh0WzT0EMXCgZgAUHylHs0uTTm6AzlR6Yhv-NTFs8Z632e2uQGGp5kGpz4apg6X90X4HmH_2ifGD98fWGrhTCKgJIKJPm92oDnzkYw6YQ8agUbwThyPCOBejAzOgvACTUC8FjIgiy0watSVPFx-VtLH435AS_YmwTW0MnIDzAfopiD-eqQE6qhxFp4iodQVtcgvwIISDCZ8DZ4y8aU_JPidqOx5BuHE6k-Tw-gI57CmEdGtQBCLgLfLuYU"/>
+<div class="flex-1 flex flex-col justify-center">
+<span class="font-semibold text-[15px] text-textMain leading-tight">ぱぱ</span>
+<span class="text-xs text-textSub mt-0.5">職場 ・ 5分前</span>
+</div>
+<div class="flex items-center text-success ml-2">
+<span class="text-sm font-semibold mr-1">60%</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">battery_4_bar</span>
+</div>
+</div>
+<!-- Row 3: えみ (Stale) -->
+<div class="flex items-center py-3 border-b border-border/50">
+<img alt="えみ" class="w-11 h-11 rounded-full object-cover mr-4 shadow-sm" data-alt="A simple, ordinary portrait photo of a young Japanese teenage girl with a casual expression. Plain background, natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxjeVNSw_cH5NG2moh7qmYkRRfKIIEhnLirKW-WUs1DZzWjySvDvJz07oC70xssHQfeLVYRZgwvGEWyNwg3AehWheZZ7R_Z73hVJZnCkpbaHw4N1fEAJbXk7Y_cp6p-RN8MXhQEV1_MmB6e91TnL0quQLuJ0cEMr198E3eweSqMd3a9J9b-r0j844Iu2NxfvnVfXJ3n67FpESW6trzRbQOedmvx-sqFA85PLpz3wXiiq9NgaRLRpjWyoaYnPNSKPW__fBwb-fWNhw"/>
+<div class="flex-1 flex flex-col justify-center">
+<span class="font-semibold text-[15px] text-textMain leading-tight">えみ</span>
+<span class="text-xs text-textMuted mt-0.5">学校 ・ 1時間前</span>
+</div>
+<div class="flex items-center text-success ml-2">
+<span class="text-sm font-semibold mr-1">90%</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">battery_full</span>
+</div>
+</div>
+<!-- Row 4: りく (Moving / Low Battery) -->
+<div class="flex items-center py-3 border-b border-border/50">
+<img alt="りく" class="w-11 h-11 rounded-full object-cover mr-4 shadow-sm" data-alt="A simple, ordinary portrait photo of a young Japanese boy smiling. Plain background, natural lighting, typical family app avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2PxNvM-DKYI1xgJccmvEwhwrCD4LOmXq_CtoB3VGvmHOXtKU93VFXrztIm_OHf62_IWgLZUOe0UsPfs4ooMyZehMmxvuQjwjdrt53RK3Ne6TDEj8vCTGUEeZxi3uDUZ-Q_b6I6C9n95ZKFmlHkoiY52nDjwsX9F-SS6UJYbwqFEeKaiutZShU6QluU2BRhmesLsK3zjqUbnMagdDaFKTLf_jdsbBufhi2EfF96o8IBaNmMPPOWJJraER-e_jEGstn1fdy5dzbuhc"/>
+<div class="flex-1 flex flex-col justify-center">
+<span class="font-semibold text-[15px] text-textMain leading-tight">りく</span>
+<span class="text-xs text-textSub mt-0.5">🚗 移動中 ・ 2分前</span>
+</div>
+<div class="flex items-center text-danger ml-2">
+<span class="text-sm font-semibold mr-1">15%</span>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">battery_1_bar</span>
+</div>
+</div>
+<!-- Row 5: けん (Offline) -->
+<div class="flex items-center py-3">
+<img alt="けん" class="w-11 h-11 rounded-full object-cover mr-4 shadow-sm grayscale opacity-70" data-alt="A simple, ordinary portrait photo of an older Japanese man, but the image is desaturated and grayed out to indicate being offline or not sharing location." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk9KUgG7bzN5SW6I5RnMZeXbZqFvq-s4_XE7fEchB8h4z1KQ382hQGQbmSwuX8KzB_mTgKu2JQ7VsSjmzID3PjWCp97sKMIcIhIles8ugbY4RSY82lNkP1PraUAKh67ZM4cUc0L_-EoK3WYloTgW_pjIrfP-n_B79RaeVU07r_94uGkGrN-iqFN6PrmZd8kQ-Psj2rZ3DssNzJjqfb75GXypcm3Nv3CnX5DdTsfaMCWXGsv6vAoXwLuD30JA-F1ly8ccUmh2wQnf8"/>
+<div class="flex-1 flex flex-col justify-center">
+<span class="font-semibold text-[15px] text-textMain leading-tight opacity-70">けん</span>
+<span class="text-xs text-textMuted mt-0.5">共有オフ</span>
+</div>
+<!-- No battery for offline -->
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface border-t border-border w-full z-50 flex justify-around items-center h-16 px-2 shadow-[0_-1px_3px_0_rgba(0,0,0,0.05)]">
+<!-- Tab 1: マップ (Active) -->
+<button class="flex flex-col items-center justify-center text-primary font-bold hover:bg-slate-50 active:scale-95 transition-transform p-2 rounded-lg flex-1">
+<span class="material-symbols-outlined text-[24px] mb-0.5" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label text-[10px]">マップ</span>
+</button>
+<!-- Tab 2: 場所 -->
+<button class="flex flex-col items-center justify-center text-textSub hover:bg-slate-50 active:scale-95 transition-transform p-2 rounded-lg flex-1">
+<span class="material-symbols-outlined text-[24px] mb-0.5">location_on</span>
+<span class="font-label text-[10px]">場所</span>
+</button>
+<!-- Tab 3: 履歴 -->
+<button class="flex flex-col items-center justify-center text-textSub hover:bg-slate-50 active:scale-95 transition-transform p-2 rounded-lg flex-1">
+<span class="material-symbols-outlined text-[24px] mb-0.5">history</span>
+<span class="font-label text-[10px]">履歴</span>
+</button>
+<!-- Tab 4: 設定 -->
+<button class="flex flex-col items-center justify-center text-textSub hover:bg-slate-50 active:scale-95 transition-transform p-2 rounded-lg flex-1">
+<span class="material-symbols-outlined text-[24px] mb-0.5">settings</span>
+<span class="font-label text-[10px]">設定</span>
+</button>
+</nav>
+</body></html>

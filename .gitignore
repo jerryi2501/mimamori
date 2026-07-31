@@ -14,3 +14,8 @@ dist/
 # エディタ・OS
 .DS_Store
 *.log
+
+# Claude Code のツール類（アプリのコードではないため公開しない）
+.agents/
+.claude/
+skills-lock.json

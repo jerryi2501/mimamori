@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import { Plus, Settings } from "lucide-react";
+import { Bell, Plus, Settings } from "lucide-react";
 import {
   TILE_LIGHT,
+  TILE_DARK,
   TILE_ATTRIBUTION,
   TILE_SUBDOMAINS,
   MAX_ZOOM,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchMembers } from "@/api/mockApi";
+import { fetchMembers, fetchUnreadCount } from "@/api/mockApi";
+import { useAppStore } from "@/store";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import MemberList from "@/components/map/MemberList";
 import MapControls from "@/components/map/MapControls";
@@ -21,10 +24,19 @@ import MapControls from "@/components/map/MapControls";
 export default function MapPage() {
   const [members, setMembers] = useState([]);
   const [map, setMap] = useState(null);
+  const isNight = useAppStore((state) => state.isNight);
+  // 未読件数は store に置く。通知画面で既読にしたら、ここも自動で 0 になる
+  const unread = useAppStore((state) => state.unreadCount);
+  const setUnreadCount = useAppStore((state) => state.setUnreadCount);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchMembers().then(setMembers);
-  }, []);
+    fetchUnreadCount().then(setUnreadCount);
+  }, [setUnreadCount]);
+
+  /** ピンまたは一覧の行から SC-M02 メンバー詳細へ移動する */
+  const openMember = (id) => navigate(`/member/${id}`);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -36,8 +48,10 @@ export default function MapPage() {
         zoomControl={false}
         className="absolute inset-0 h-full w-full"
       >
+        {/* ⚠️ key を変えないと react-leaflet は url の差し替えを反映しない */}
         <TileLayer
-          url={TILE_LIGHT}
+          key={isNight ? "dark" : "light"}
+          url={isNight ? TILE_DARK : TILE_LIGHT}
           attribution={TILE_ATTRIBUTION}
           subdomains={TILE_SUBDOMAINS}
           maxZoom={MAX_ZOOM}
@@ -47,22 +61,56 @@ export default function MapPage() {
             key={member.id}
             position={[member.lat, member.lng]}
             icon={createMemberIcon(member)}
+            eventHandlers={{ click: () => openMember(member.id) }}
           />
         ))}
       </MapContainer>
 
       {/* ===== トップバー（地図の上に重ねる） ===== */}
       <header className="bg-surface border-line absolute inset-x-0 top-0 z-[1000] flex items-center justify-between border-b px-4 py-3">
-        <button type="button" aria-label="設定" className="text-ink">
+        <button
+          type="button"
+          aria-label="設定"
+          onClick={() => navigate("/settings")}
+          className="text-ink"
+        >
           <Settings size={22} strokeWidth={2} />
         </button>
+
         <h1 className="text-ink text-lg font-bold">みまもり</h1>
-        <button type="button" aria-label="メンバーを追加" className="text-ink">
-          <Plus size={22} strokeWidth={2} />
-        </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label={unread > 0 ? `通知 ${unread}件の未読` : "通知"}
+            onClick={() => navigate("/notifications")}
+            className="text-ink relative"
+          >
+            <Bell size={22} strokeWidth={2} />
+            {/* 0件のときは出さない */}
+            {unread > 0 && (
+              <span className="bg-alert border-surface absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 px-1 text-[10px] font-bold text-white">
+                {unread}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            aria-label="メンバーを追加"
+            onClick={() => navigate("/groups")}
+            className="text-ink"
+          >
+            <Plus size={22} strokeWidth={2} />
+          </button>
+        </div>
       </header>
 
-      <MapControls map={map} />
+      <MapControls
+        map={map}
+        onOpenChat={() => navigate("/chat")}
+        onSos={() => navigate("/sos")}
+      />
 
       {/* ===== ボトムシート ===== */}
       <section className="bg-surface shadow-sheet absolute inset-x-0 bottom-0 z-[1000] flex h-[42%] flex-col rounded-t-2xl">
@@ -81,7 +129,7 @@ export default function MapPage() {
 
         {/* 一覧（はみ出したらスクロール） */}
         <div className="flex-1 overflow-y-auto">
-          <MemberList members={members} />
+          <MemberList members={members} onSelect={openMember} />
         </div>
       </section>
     </div>

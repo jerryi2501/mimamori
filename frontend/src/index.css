@@ -24,6 +24,10 @@
   --color-text-muted: #9ca3af; /* 古い情報・共有オフ */
   --color-border: #e5e7eb;
 
+  /* 浮くボタン。夜は「白」ではなく半透明の暗色にする（ガイドライン §1.5）*/
+  --fab-bg: #ffffff;
+  --fab-border: transparent;
+
   /* ステータス色（意味を固定：勝手に流用しない） */
   --status-safe: #22c55e; /* 共有中・到着・電池50%以上 */
   --status-warning: #f59e0b; /* 電池20〜49%・応答なし */
@@ -96,10 +100,18 @@ html.night {
   --color-text-muted: #6b7078;
   --color-border: rgba(255, 255, 255, 0.09);
 
+  /* 白いボタンは暗い地図の上で浮きすぎる。半透明＋ぼかしに置き換える */
+  --fab-bg: rgba(30, 32, 37, 0.88);
+  --fab-border: rgba(255, 255, 255, 0.09);
+
   --status-safe: #34d97a;
   --status-warning: #fbb040;
   --status-danger: #ff5a5a;
   --status-idle: #6b7078;
+  --place-home: #34d97a;
+  --place-school: #a78bfa;
+  --place-work: #60a5fa;
+  --place-other: #fb923c;
 }
 
 * {
@@ -109,6 +121,10 @@ html.night {
 body {
   margin: 0;
   background-color: var(--color-bg-secondary);
+  /* テーマ切替の違和感をなくす（ガイドライン §1.5）*/
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
 }
 
 a {
@@ -167,6 +183,10 @@ h3 {
   --shadow-sheet: 0 -4px 20px rgb(0 0 0 / 0.1);
   --shadow-pin: 0 3px 8px rgb(0 0 0 / 0.25);
   --shadow-sos: 0 4px 12px rgb(239 68 68 / 0.4);
+
+  /* 浮くボタン */
+  --color-fab: var(--fab-bg);
+  --color-fab-line: var(--fab-border);
 }
 
 @theme inline {
@@ -331,3 +351,110 @@ h3 {
 }
 /* ⚠️ opacity はアバターだけに掛ける。
    ピン全体に掛けると白いラベルまで透けて読めなくなる（設計時の失敗例）。 */
+/* ===== 地図上の線と円 =====
+   Leaflet は色を SVG の「属性」で設定する（setAttribute('stroke', …)）。
+   属性の中では var() が使えないため、CSS クラス側で塗る。
+   CSS ルールは presentation attribute より優先されるので必ず勝つ。 */
+.mm-path {
+  stroke: var(--color-primary);
+}
+
+.mm-zone {
+  /* 破線 = 「おおよその範囲」であることを見た目で伝える */
+  stroke-dasharray: 6 5;
+}
+.mm-zone--home {
+  stroke: var(--place-home);
+  fill: var(--place-home);
+}
+.mm-zone--school {
+  stroke: var(--place-school);
+  fill: var(--place-school);
+}
+.mm-zone--work {
+  stroke: var(--place-work);
+  fill: var(--place-work);
+}
+.mm-zone--other {
+  stroke: var(--place-other);
+  fill: var(--place-other);
+}
+
+/* 円の中央に出す名前のチップ（divIcon の中身）*/
+.mm-zone-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* Leaflet が置いた座標を中心にする */
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.mm-zone-chip__dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+/* ===== SOS 発信中の脈動 ===== */
+@keyframes mm-sos-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0.45);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 24px rgb(239 68 68 / 0);
+  }
+}
+
+.mm-sos-pulse {
+  animation: mm-sos-pulse 1.8s ease-out infinite;
+}
+
+/* 動きに弱い人のために止める（アクセシビリティ）*/
+@media (prefers-reduced-motion: reduce) {
+  .mm-sos-pulse {
+    animation: none;
+  }
+}
+/* ===== SOS 発信中の脈動 ===== */
+@keyframes mm-sos-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0.45);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 24px rgb(239 68 68 / 0);
+  }
+}
+
+.mm-sos-pulse {
+  animation: mm-sos-pulse 1.8s ease-out infinite;
+}
+
+/* 動きに弱い人のために止める（アクセシビリティ）*/
+@media (prefers-reduced-motion: reduce) {
+  .mm-sos-pulse {
+    animation: none;
+  }
+}
+/* SOS の位置を示す円。Leaflet は属性で色を付けるので CSS 側で塗る */
+.mm-alert-area {
+  stroke: var(--status-danger);
+  fill: var(--status-danger);
+}

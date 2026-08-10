@@ -7,7 +7,7 @@ import { DEFAULT_CENTER, DEFAULT_ZOOM } from "@/lib/mapConfig";
  * ⚠️ MapContainer の「外側」に置くこと。
  * 内側に置くと、ボタンのクリックが地図のドラッグ操作に吸われてしまう。
  */
-export default function MapControls({ map }) {
+export default function MapControls({ map, onOpenChat, onSos }) {
   /** 地図を初期位置に戻す */
   const handleRecenter = () => {
     if (!map) return; // 最初の描画では map はまだ null
@@ -20,6 +20,7 @@ export default function MapControls({ map }) {
       <button
         type="button"
         aria-label="SOSを送信"
+        onClick={onSos}
         className="bg-alert shadow-sos flex h-12 w-12 items-center justify-center rounded-full text-xs font-extrabold text-white"
       >
         SOS
@@ -27,19 +28,19 @@ export default function MapControls({ map }) {
 
       <ControlButton label="現在地に戻る" Icon={LocateFixed} onClick={handleRecenter} />
       <ControlButton label="地図の種類" Icon={Layers} />
-      <ControlButton label="チャット" Icon={MessageCircle} />
+      <ControlButton label="チャット" Icon={MessageCircle} onClick={onOpenChat} />
     </div>
   );
 }
 
-/** 白い丸ボタン（共通部品） */
+/** 丸い浮きボタン（共通部品）。昼は白、夜は半透明の暗色になる */
 function ControlButton({ label, Icon, onClick }) {
   return (
     <button
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="bg-surface text-ink shadow-float flex h-11 w-11 items-center justify-center rounded-full"
+      className="bg-fab border-fab-line text-ink shadow-float flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md"
     >
       <Icon size={20} strokeWidth={2} />
     </button>

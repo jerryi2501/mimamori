@@ -1,10 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <!-- viewport-fit=cover は必須。これが無いと iPhone で
+         env(safe-area-inset-*) が 0 になり、タブバーがホームバーに重なる -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+
+    <title>みまもり — 家族の位置共有アプリ</title>
+    <meta
+      name="description"
+      content="家族の「今どこ？」を、そっと見守る位置共有アプリ。リアルタイム位置共有・セーフゾーン通知・SOS・呼び出し。"
+    />
+
+    <!-- モバイルのブラウザ枠の色。アプリのテーマに合わせて昼夜で変える -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141519" media="(prefers-color-scheme: dark)" />
+
+    <!-- リンクを共有したときの見え方 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="みまもり — 家族の位置共有アプリ" />
+    <meta
+      property="og:description"
+      content="家族の「今どこ？」を、そっと見守る。React + Spring Boot のポートフォリオ作品。"
+    />
   </head>
   <body>
     <div id="root"></div>

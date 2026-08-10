@@ -1,8 +1,38 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
+  "plugins": ["react", "oxc", "jsx-a11y"],
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
   "rules": {
+    // ---- 未定義の変数・component（2026-08-02 の白画面の原因）----
+    // TypeScript を使わない方針なので、この2つが唯一の防波堤になる
+    "no-undef": "error",
+    "react/jsx-no-undef": "error",
+
+    // ---- React Hooks ----
     "react/rules-of-hooks": "error",
+    // useEffect の依存配列の書き漏れを検出する。
+    // 依存を書き忘れると「古い値を掴んだまま動く」バグになり、原因究明が非常に難しい
+    "react/exhaustive-deps": "error",
+
+    // ---- JSX ----
+    // 一覧描画で key を忘れると、並べ替え時に状態が混ざる
+    "react/jsx-key": "error",
+    // 配列の添字を key にすると、要素の削除・並べ替えで壊れる
+    "react/no-array-index-key": "warn",
+
+    // ---- その他 ----
+    "no-unused-vars": "warn",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "ignorePatterns": ["dist", "node_modules"],
+  "overrides": [
+    {
+      // 設定ファイルはブラウザではなく Node.js で動く（__dirname などが使える）
+      "files": ["*.config.js", "*.config.mjs"],
+      "env": { "node": true }
+    }
+  ]
 }

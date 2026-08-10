@@ -14,6 +14,13 @@
     "strings": "on"
   },
 
+  // ===== oxlint（リンター）=====
+  // 設定は frontend/ にあるので、ワークスペース直下からの相対パスで教える。
+  // これがないと拡張機能がルールを読めず、警告が一切出ない。
+  "oxc.configPath": "frontend/.oxlintrc.json",
+  // 入力中に検査する（保存時だけだと気づくのが遅い）
+  "oxc.lint.run": "onType",
+
   // ===== 文字の見分けやすさ =====
   // l / 1 / I の取り違えを防ぐため、区別しやすい等幅フォントを優先する。
   "editor.fontFamily": "'JetBrains Mono', 'Fira Code', 'Cascadia Mono', Consolas, monospace",

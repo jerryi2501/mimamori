@@ -33,6 +33,7 @@
 			（起動時の「support has not been tested」警告を消すため）
 		-->
 		<flyway.version>11.20.3</flyway.version>
+		<jjwt.version>0.13.0</jjwt.version>
 	</properties>
 
 	<dependencies>
@@ -83,6 +84,29 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!--
+			JWT。Spring Boot 3 は JWT ライブラリを同梱しないので自分で入れる。
+			api だけコンパイル時に使い、impl と jackson は実行時に読み込まれる
+			（0.12 以降の推奨構成）。
+		-->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 

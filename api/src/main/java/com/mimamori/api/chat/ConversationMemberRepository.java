@@ -8,6 +8,9 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     List<ConversationMember> findByUserId(Long userId);
 
+    /** その会話の参加者。個人トークで「相手は誰か」を出すのに使う */
+    List<ConversationMember> findByConversationId(Long conversationId);
+
     /** 権限チェックと既読更新の両方で使う */
     Optional<ConversationMember> findByConversationIdAndUserId(Long conversationId, Long userId);
 }

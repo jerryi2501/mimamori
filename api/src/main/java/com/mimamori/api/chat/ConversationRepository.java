@@ -10,6 +10,24 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     List<Conversation> findByGroupId(Long groupId);
 
+    /** グループトークは1グループに1つだけ。無ければ呼び出し側が作る */
+    Optional<Conversation> findByGroupIdAndType(Long groupId, ConversationType type);
+
+    /**
+     * そのグループで自分が参加している個人トーク（SC-C01 の一覧）。
+     *
+     * <p>⚠️ グループトークは別に取る。あちらは conversation_members に行が 無い人（後から参加した人）にも見せる必要があるため。
+     */
+    @Query(
+            """
+            SELECT c FROM Conversation c
+            WHERE c.group.id = :groupId
+              AND c.type = com.mimamori.api.chat.ConversationType.DIRECT
+              AND EXISTS (SELECT 1 FROM ConversationMember m
+                          WHERE m.conversation = c AND m.user.id = :userId)
+            """)
+    List<Conversation> findDirectsOf(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
     /**
      * 2人の個人トークを探す（GET /api/conversations/direct/{userId} 用）。
      *

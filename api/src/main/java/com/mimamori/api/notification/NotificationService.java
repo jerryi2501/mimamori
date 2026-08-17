@@ -67,6 +67,28 @@ public class NotificationService {
                 recipientIds, arrived ? NotificationType.ARRIVE : NotificationType.LEAVE, payload);
     }
 
+    /** F-04 緊急通報を家族に知らせる。画面はここから SC-S02 へ飛べる */
+    @Transactional
+    public void notifySos(List<Long> recipientIds, User member, Long alertId) {
+        Map<String, Object> payload = NotificationPayload.ofMember(member);
+        payload.put(NotificationPayload.ALERT_ID, alertId);
+
+        notifyAll(recipientIds, NotificationType.SOS, payload);
+    }
+
+    /**
+     * F-11 「大丈夫だよ」の応答を、呼び出した人に知らせる。
+     *
+     * <p>⚠️ 宛先は呼び出した本人だけ。家族全員に配ると、親子のやりとりが 毎回グループ全体に流れてしまう。
+     */
+    @Transactional
+    public void notifyPingOk(Long recipientId, User member) {
+        notifyAll(
+                List.of(recipientId),
+                NotificationType.PING_OK,
+                NotificationPayload.ofMember(member));
+    }
+
     /** F-08 電池が少なくなったことを家族に知らせる */
     @Transactional
     public void notifyLowBattery(List<Long> recipientIds, User member, int batteryLevel) {

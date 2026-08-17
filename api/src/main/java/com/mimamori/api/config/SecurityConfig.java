@@ -79,12 +79,22 @@ public class SecurityConfig {
                 //    「未ログイン」も 403 で返ってしまう。
                 //    フロントは 401（トークンが無効→ログイン画面へ）と
                 //    403（ログイン済みだが権限が無い）を区別する必要がある。
+                //
+                // ⚠️ sendError ではなく本文を自分で書く。sendError だと Spring の
+                //    既定のエラー本文になり、message が英語の
+                //    "No message available" のまま画面に出る。
+                //    GlobalExceptionHandler はここまで届かない（例外ではなく
+                //    フィルタチェーンの中で処理が終わるため）。
                 .exceptionHandling(
                         ex ->
                                 ex.authenticationEntryPoint(
-                                        (request, response, authException) ->
-                                                response.sendError(
-                                                        HttpServletResponse.SC_UNAUTHORIZED)))
+                                        (request, response, authException) -> {
+                                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                            response.setContentType("application/json");
+                                            response.setCharacterEncoding("UTF-8");
+                                            response.getWriter()
+                                                    .write("{\"message\":\"ログインが必要です\"}");
+                                        }))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

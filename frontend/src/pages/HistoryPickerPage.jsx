@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMembers } from "@/api/mockApi";
+import { fetchMembers } from "@/api";
+import { useAppStore } from "@/store";
 import MemberList from "@/components/map/MemberList";
 
 /**
@@ -9,11 +10,12 @@ import MemberList from "@/components/map/MemberList";
  */
 export default function HistoryPickerPage() {
   const navigate = useNavigate();
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
   const [members, setMembers] = useState([]);
 
   useEffect(() => {
-    fetchMembers().then(setMembers);
-  }, []);
+    fetchMembers(currentGroupId).then(setMembers);
+  }, [currentGroupId]);
 
   return (
     <div className="bg-canvas h-full overflow-y-auto">

@@ -1,41 +1,50 @@
 // ===== API クライアント（axios 版） =====
-// バックエンド API への共通通信処理。
-// 共通レスポンス形式 { success, data, message } をここで処理し、
-// 画面側には data だけを返す（失敗時は message を throw）。
+// バックエンドとの通信はすべてここを通る。
+// 認証トークンの付与と、エラーの日本語化をここに集約する。
 import axios from "axios";
+import { useAppStore } from "@/store";
 
-// baseURL: frontend/.env の VITE_API_BASE を使う。
-// ローカル開発例: VITE_API_BASE=http://localhost:8000
-const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:8000",
+const client = axios.create({
+  // 開発時は .env.local の VITE_API_BASE。Vercel では環境変数に
+  // Railway の URL を入れる。
+  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:8080",
   headers: { "Content-Type": "application/json" },
-  // 認証は HttpOnly Cookie で行う想定のため Cookie を送受信する。
-  // ※ クロスサイト（Vercel ↔ バックエンド）では、サーバー側で
-  //   Cookie に SameSite=None; Secure を付ける必要がある。
-  withCredentials: true,
+  // ⚠️ withCredentials は付けない。認証は Cookie ではなく Authorization
+  //   ヘッダーで行う（backend の SecurityConfig は allowCredentials(false)）。
+  //   true にすると CORS のプリフライトが通らなくなる。
 });
 
-// レスポンス後：{ success, data, message } を判定し、data だけ返す
-instance.interceptors.response.use(
-  (res) => {
-    const body = res.data;
-    if (body && body.success === false) {
-      return Promise.reject(new Error(body.message || "エラーが発生しました"));
+// ---- 送信前: 保存してあるトークンを載せる ----
+client.interceptors.request.use((config) => {
+  // ⚠️ React の外なので useAppStore(...) ではなく getState()。
+  //   フックはコンポーネントの中でしか呼べない。
+  const token = useAppStore.getState().token;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ---- 受信後: 本文だけ返す / 失敗は Error にして投げる ----
+client.interceptors.response.use(
+  (res) => res.data,
+  (error) => {
+    // ⚠️ 401 = トークンが無効か期限切れ。保存を消して、
+    //   RequireAuth にログイン画面へ送らせる。
+    if (error.response?.status === 401) {
+      useAppStore.getState().clearSession();
     }
-    return body?.data ?? body;
-  },
-  (err) => {
-    // HTTPエラー（401/409/500 など）。サーバーが message を返していれば使う。
-    const msg =
-      err.response?.data?.message || err.message || "通信エラーが発生しました";
-    return Promise.reject(new Error(msg));
+
+    // backend の GlobalExceptionHandler が { "message": "…" } を返す。
+    // ⚠️ 通信自体が届かない場合は error.response が無い。そこを区別しないと
+    //   「サーバー未起動」が「エラーが発生しました」に化けて原因が分からなくなる。
+    const message =
+      error.response?.data?.message ??
+      (error.response ? "エラーが発生しました" : "サーバーに接続できません");
+
+    return Promise.reject(new Error(message));
   }
 );
 
-// 各メソッドのショートカット
-export const api = {
-  get: (path, config) => instance.get(path, config),
-  post: (path, body, config) => instance.post(path, body, config),
-  put: (path, body, config) => instance.put(path, body, config),
-  del: (path, config) => instance.delete(path, config),
-};
+export default client;

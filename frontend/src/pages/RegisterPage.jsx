@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, User, Mail, Lock } from "lucide-react";
-import { register } from "@/api/mockApi";
+import { register } from "@/api";
 import { useAppStore } from "@/store";
 import Field from "@/components/common/Field";
 
@@ -11,7 +11,7 @@ import Field from "@/components/common/Field";
  */
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const setUser = useAppStore((state) => state.setUser);
+  const setSession = useAppStore((state) => state.setSession);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,8 +27,10 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const user = await register({ name: name.trim(), email, password });
-      setUser(user);
+      const session = await register({ name: name.trim(), email, password });
+      setSession(session);
+      // ⚠️ 登録直後はまだどのグループにも入っていない。
+      //   currentGroupId は null のまま。地図が案内を出す。
       navigate("/", { replace: true });
     } catch (caught) {
       setError(caught.message);

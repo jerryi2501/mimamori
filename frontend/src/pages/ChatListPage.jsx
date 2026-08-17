@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users } from "lucide-react";
-import { fetchConversations } from "@/api/mockApi";
+import { fetchConversations } from "@/api";
 import { formatChatListTime } from "@/lib/format";
 
 /**

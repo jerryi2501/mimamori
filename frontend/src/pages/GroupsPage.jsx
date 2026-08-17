@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Copy, Check, ChevronRight, Users } from "lucide-react";
-import { fetchGroups, createGroup, joinGroup } from "@/api/mockApi";
+import { fetchGroups, createGroup, joinGroup } from "@/api";
+import { formatDayLabel } from "@/lib/format";
+import { useAppStore } from "@/store";
 
 /**
  * SC-G01 グループ一覧 ＋ SC-G02 作成・参加
@@ -17,6 +19,9 @@ export default function GroupsPage() {
   const [error, setError] = useState(null); // 参加に失敗した理由
   const [busy, setBusy] = useState(false);
 
+  // 作成・参加した直後は、そのグループを地図に出す
+  const setCurrentGroupId = useAppStore((state) => state.setCurrentGroupId);
+
   const reload = () => fetchGroups().then((list) => setGroups([...list]));
 
   useEffect(() => {
@@ -29,11 +34,19 @@ export default function GroupsPage() {
     if (name === "" || busy) return;
 
     setBusy(true);
-    await createGroup(name);
-    setNewName("");
-    setCreating(false);
-    await reload();
-    setBusy(false);
+    setError(null);
+
+    try {
+      const created = await createGroup(name);
+      setCurrentGroupId(created.id);
+      setNewName("");
+      setCreating(false);
+      await reload();
+    } catch (caught) {
+      setError(caught.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleJoin = async (event) => {
@@ -45,7 +58,8 @@ export default function GroupsPage() {
 
     // ⚠️ joinGroup は失敗すると throw する
     try {
-      await joinGroup(code);
+      const joined = await joinGroup(code);
+      setCurrentGroupId(joined.id);
       setCode("");
       await reload();
     } catch (caught) {
@@ -183,7 +197,8 @@ function GroupCard({ group, onOpen }) {
             )}
           </div>
           <p className="text-ink-sub mt-0.5 text-xs">
-            メンバー {group.memberIds.length}人 ・ 作成日 {group.createdAt}
+            メンバー {group.memberCount}人 ・ 作成日{" "}
+            {formatDayLabel(new Date(group.createdAt))}
           </p>
         </div>
 

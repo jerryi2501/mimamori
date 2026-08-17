@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Bell, BellOff, CircleCheck } from "lucide-react";
-import { fetchPing, respondToPing, fetchMembers } from "@/api/mockApi";
+import { fetchPing, respondToPing, fetchMembers } from "@/api";
+import { useAppStore } from "@/store";
 import useAlarmSound from "@/hooks/useAlarmSound";
 
 /**
@@ -14,6 +15,8 @@ export default function PingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
+
   const [ping, setPing] = useState(null);
   const [sender, setSender] = useState(null);
   const [muted, setMuted] = useState(false);
@@ -22,16 +25,18 @@ export default function PingPage() {
   useEffect(() => {
     let alive = true;
 
-    Promise.all([fetchPing(id), fetchMembers()]).then(([foundPing, members]) => {
-      if (!alive) return;
-      setPing(foundPing);
-      setSender(members.find((m) => m.id === foundPing.fromUserId) ?? null);
-    });
+    Promise.all([fetchPing(id), fetchMembers(currentGroupId)]).then(
+      ([foundPing, members]) => {
+        if (!alive) return;
+        setPing(foundPing);
+        setSender(members.find((m) => m.id === foundPing.fromUserId) ?? null);
+      }
+    );
 
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, currentGroupId]);
 
   // 応答が済んだら鳴らさない
   const alarming = ping?.status === "SENT" && !muted;

@@ -9,7 +9,7 @@ import {
   TILE_SUBDOMAINS,
   MAX_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchSosAlert, fetchMembers, fetchMe, respondToSos } from "@/api/mockApi";
+import { fetchSosAlert, fetchMembers, fetchMe, respondToSos } from "@/api";
 import { formatLastUpdated } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
@@ -26,6 +26,7 @@ export default function SosAlertPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNight = useAppStore((state) => state.isNight);
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
 
   const [alert, setAlert] = useState(null);
   const [members, setMembers] = useState([]);
@@ -36,7 +37,7 @@ export default function SosAlertPage() {
   useEffect(() => {
     let alive = true;
 
-    Promise.all([fetchSosAlert(id), fetchMembers(), fetchMe()]).then(
+    Promise.all([fetchSosAlert(id), fetchMembers(currentGroupId), fetchMe()]).then(
       ([foundAlert, foundMembers, foundMe]) => {
         if (!alive) return;
         setAlert(foundAlert);
@@ -49,7 +50,7 @@ export default function SosAlertPage() {
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, currentGroupId]);
 
   const handleRespond = async () => {
     setBusy(true);

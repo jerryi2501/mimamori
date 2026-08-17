@@ -10,7 +10,7 @@ import {
   MAX_ZOOM,
   DEFAULT_CENTER,
 } from "@/lib/mapConfig";
-import { fetchPlace, createPlace, updatePlace, deletePlace } from "@/api/mockApi";
+import { fetchPlace, createPlace, updatePlace, deletePlace } from "@/api";
 import { formatDistance } from "@/lib/geo";
 import { placeColor } from "@/lib/format";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -36,6 +36,7 @@ export default function PlaceEditPage() {
   const { id } = useParams(); // undefined なら新規作成
   const navigate = useNavigate();
   const isNight = useAppStore((state) => state.isNight);
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
 
   const isEdit = id !== undefined;
 
@@ -46,6 +47,7 @@ export default function PlaceEditPage() {
   const [loading, setLoading] = useState(isEdit);
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function PlaceEditPage() {
 
   const handleSave = async () => {
     setBusy(true);
+    setError(null);
 
     const input = {
       name: name.trim(),
@@ -86,19 +89,33 @@ export default function PlaceEditPage() {
       lng: center[1],
     };
 
-    if (isEdit) {
-      await updatePlace(id, input);
-    } else {
-      await createPlace(input);
+    // ⚠️ 失敗を握りつぶさない。半径や名前の長さはサーバーも検証していて、
+    //   catch が無いと「保存を押しても何も起きない」画面になる
+    try {
+      if (isEdit) {
+        await updatePlace(id, input);
+      } else {
+        await createPlace(currentGroupId, input);
+      }
+      navigate("/places", { replace: true });
+    } catch (caught) {
+      setError(caught.message);
+      setBusy(false);
     }
-
-    navigate("/places", { replace: true });
   };
 
   const handleDelete = async () => {
     setBusy(true);
-    await deletePlace(id);
-    navigate("/places", { replace: true });
+    setError(null);
+
+    try {
+      await deletePlace(id);
+      navigate("/places", { replace: true });
+    } catch (caught) {
+      setError(caught.message);
+      setConfirmDelete(false);
+      setBusy(false);
+    }
   };
 
   if (loading) {
@@ -265,6 +282,13 @@ export default function PlaceEditPage() {
         <p className="text-ink-muted mt-5 text-xs">
           座標 {center[0].toFixed(5)}, {center[1].toFixed(5)}
         </p>
+
+        {/* サーバーが断った理由をそのまま出す */}
+        {error && (
+          <p role="alert" className="text-alert mt-4 text-xs">
+            {error}
+          </p>
+        )}
 
         {isEdit && (
           <button

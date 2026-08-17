@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, MapPin } from "lucide-react";
-import { fetchMembers, fetchMe, sendSos, resolveSos } from "@/api/mockApi";
+import { fetchMembers, fetchMe, sendSos, resolveSos } from "@/api";
+import { useAppStore } from "@/store";
 import useCountdown from "@/hooks/useCountdown";
 import useLongPress from "@/hooks/useLongPress";
 
@@ -21,6 +22,8 @@ const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 export default function SosPage() {
   const navigate = useNavigate();
 
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
+
   const [me, setMe] = useState(null);
   const [members, setMembers] = useState([]);
   const [alert, setAlert] = useState(null); // 発信済みなら中身が入る
@@ -28,8 +31,11 @@ export default function SosPage() {
 
   useEffect(() => {
     fetchMe().then(setMe);
-    fetchMembers().then(setMembers);
   }, []);
+
+  useEffect(() => {
+    fetchMembers(currentGroupId).then(setMembers);
+  }, [currentGroupId]);
 
   const handleSend = useCallback(async () => {
     if (!me) return;

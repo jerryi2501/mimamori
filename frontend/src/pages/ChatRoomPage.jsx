@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Send } from "lucide-react";
-import { fetchConversation, fetchMessages, sendMessage } from "@/api/mockApi";
+import { fetchConversation, fetchMessages, sendMessage } from "@/api";
 import { formatTime, formatDateDivider } from "@/lib/format";
 
 /**

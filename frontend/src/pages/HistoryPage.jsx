@@ -12,7 +12,7 @@ import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchMember, fetchHistory } from "@/api/mockApi";
+import { fetchMember, fetchHistory } from "@/api";
 import {
   formatDayLabel,
   formatTime,
@@ -31,6 +31,7 @@ export default function HistoryPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNight = useAppStore((state) => state.isNight);
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
 
   const [member, setMember] = useState(null);
   const [events, setEvents] = useState([]);
@@ -41,7 +42,7 @@ export default function HistoryPage() {
     let alive = true;
     setLoading(true);
 
-    Promise.all([fetchMember(id), fetchHistory(id, dayOffset)]).then(
+    Promise.all([fetchMember(currentGroupId, id), fetchHistory(id, dayOffset)]).then(
       ([foundMember, foundEvents]) => {
         if (!alive) return;
         setMember(foundMember);
@@ -53,7 +54,7 @@ export default function HistoryPage() {
     return () => {
       alive = false;
     };
-  }, [id, dayOffset]);
+  }, [id, dayOffset, currentGroupId]);
 
   // 表示中の日付
   const date = useMemo(() => {
@@ -69,7 +70,7 @@ export default function HistoryPage() {
     [events]
   );
 
-  // 合計はデータから計算する。mockApi に持たせると数字がずれる元になる
+  // 合計はデータから計算する。API に持たせると数字がずれる元になる
   const totalMeters = events
     .filter((e) => e.type === "move")
     .reduce((sum, e) => sum + e.distanceMeters, 0);

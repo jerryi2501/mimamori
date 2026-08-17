@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { MapPin, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { login, DEMO_ACCOUNT } from "@/api/mockApi";
+import { login, fetchGroups, DEMO_ACCOUNT } from "@/api";
 import { useAppStore } from "@/store";
 import Field from "@/components/common/Field";
 
@@ -11,7 +11,8 @@ import Field from "@/components/common/Field";
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const setUser = useAppStore((state) => state.setUser);
+  const setSession = useAppStore((state) => state.setSession);
+  const setCurrentGroupId = useAppStore((state) => state.setCurrentGroupId);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +31,16 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const user = await login(email, password);
-      setUser(user);
+      const session = await login(email, password);
+      setSession(session);
+
+      // ⚠️ setSession でトークンを保存してから groups を呼ぶ。順序を逆にすると
+      //   Authorization ヘッダーが空のまま飛んで 401 になる。
+      const groups = await fetchGroups();
+      if (groups.length > 0) {
+        setCurrentGroupId(groups[0].id);
+      }
+
       navigate(from, { replace: true }); // 履歴にログイン画面を残さない
     } catch (caught) {
       setError(caught.message);

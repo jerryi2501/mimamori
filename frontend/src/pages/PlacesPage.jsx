@@ -19,7 +19,7 @@ import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchPlaces, fetchZoneEvents } from "@/api/mockApi";
+import { fetchPlaces, fetchZoneEvents } from "@/api";
 import { placeColor, formatEventTime } from "@/lib/format";
 import { formatDistance } from "@/lib/geo";
 import { createPlaceIcon } from "@/components/map/placeIcon";
@@ -42,14 +42,16 @@ const CATEGORY_ICON = {
 export default function PlacesPage() {
   const isNight = useAppStore((state) => state.isNight);
 
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
+
   const [places, setPlaces] = useState([]);
   const [events, setEvents] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchPlaces().then(setPlaces);
-    fetchZoneEvents().then(setEvents);
-  }, []);
+    fetchPlaces(currentGroupId).then(setPlaces);
+    fetchZoneEvents(currentGroupId).then(setEvents);
+  }, [currentGroupId]);
 
   // ⚠️ useMemo 必須。毎回新しい配列だと FitBounds が無限ループする
   const centers = useMemo(
@@ -122,18 +124,29 @@ export default function PlacesPage() {
           {events.map((event) => (
             <ZoneEventRow key={event.id} event={event} />
           ))}
+          {events.length === 0 && (
+            <p className="text-ink-muted px-4 py-6 text-center text-sm">
+              まだ出入りの記録がありません
+            </p>
+          )}
         </section>
 
-        {/* TODO [BACKEND] POST /api/groups/:groupId/places */}
         <div className="px-4 pt-6">
           <button
             type="button"
             onClick={() => navigate("/places/new")}
-            className="bg-brand flex w-full items-center justify-center gap-1.5 rounded-xl py-3.5 text-[15px] font-bold text-white"
+            disabled={!currentGroupId}
+            className="bg-brand flex w-full items-center justify-center gap-1.5 rounded-xl py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
           >
             <Plus size={18} strokeWidth={2.5} />
             新しい場所を追加
           </button>
+          {/* ⚠️ 場所はグループに属する。グループが無いと登録先が決まらない */}
+          {!currentGroupId && (
+            <p className="text-ink-muted mt-2 text-center text-xs">
+              先にグループを作るか、参加してください
+            </p>
+          )}
         </div>
       </div>
     </div>

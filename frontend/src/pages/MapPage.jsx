@@ -11,7 +11,7 @@ import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchMembers, fetchUnreadCount } from "@/api/mockApi";
+import { fetchMembers, fetchUnreadCount } from "@/api";
 import { useAppStore } from "@/store";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import MemberList from "@/components/map/MemberList";
@@ -28,12 +28,21 @@ export default function MapPage() {
   // 未読件数は store に置く。通知画面で既読にしたら、ここも自動で 0 になる
   const unread = useAppStore((state) => state.unreadCount);
   const setUnreadCount = useAppStore((state) => state.setUnreadCount);
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMembers().then(setMembers);
     fetchUnreadCount().then(setUnreadCount);
   }, [setUnreadCount]);
+
+  useEffect(() => {
+    // 登録直後はまだどのグループにも入っていない
+    if (!currentGroupId) {
+      setMembers([]);
+      return;
+    }
+    fetchMembers(currentGroupId).then(setMembers);
+  }, [currentGroupId]);
 
   /** ピンまたは一覧の行から SC-M02 メンバー詳細へ移動する */
   const openMember = (id) => navigate(`/member/${id}`);
@@ -56,14 +65,19 @@ export default function MapPage() {
           subdomains={TILE_SUBDOMAINS}
           maxZoom={MAX_ZOOM}
         />
-        {members.map((member) => (
-          <Marker
-            key={member.id}
-            position={[member.lat, member.lng]}
-            icon={createMemberIcon(member)}
-            eventHandlers={{ click: () => openMember(member.id) }}
-          />
-        ))}
+        {/* ⚠️ 共有オフ・位置未送信の人は lat/lng が null。そのまま Marker に
+            渡すと Leaflet が例外を投げ、地図ごと真っ白になる。
+            一覧のほうには「共有オフ」として残す（隠さない）。 */}
+        {members
+          .filter((member) => member.lat != null && member.lng != null)
+          .map((member) => (
+            <Marker
+              key={member.id}
+              position={[member.lat, member.lng]}
+              icon={createMemberIcon(member)}
+              eventHandlers={{ click: () => openMember(member.id) }}
+            />
+          ))}
       </MapContainer>
 
       {/* ===== トップバー（地図の上に重ねる） ===== */}
@@ -129,7 +143,23 @@ export default function MapPage() {
 
         {/* 一覧（はみ出したらスクロール） */}
         <div className="flex-1 overflow-y-auto">
-          <MemberList members={members} onSelect={openMember} />
+          {/* ⚠️ 行き止まりにしない。登録直後はここに来るので、次にやることを示す */}
+          {!currentGroupId ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-8">
+              <p className="text-ink-sub text-center text-sm">
+                まだグループに参加していません
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/groups")}
+                className="bg-brand rounded-lg px-4 py-2.5 text-sm font-bold text-white"
+              >
+                グループを作る・参加する
+              </button>
+            </div>
+          ) : (
+            <MemberList members={members} onSelect={openMember} />
+          )}
         </div>
       </section>
     </div>

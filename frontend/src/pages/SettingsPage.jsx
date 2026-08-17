@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Users, HelpCircle } from "lucide-react";
-import { fetchMe } from "@/api/mockApi";
+import { fetchMe, fetchGroup, setGroupShare } from "@/api";
 import { useAppStore } from "@/store";
 import Switch from "@/components/common/Switch";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -23,28 +23,50 @@ export default function SettingsPage() {
   const setThemeMode = useAppStore((state) => state.setThemeMode);
   const isNight = useAppStore((state) => state.isNight);
 
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
+  const clearSession = useAppStore((state) => state.clearSession);
+
   const [me, setMe] = useState(null);
-  // TODO [BACKEND] 実際はサーバーの設定値を読み書きする
   const [sharing, setSharing] = useState(true);
+  // TODO [BACKEND] 通知の設定はまだサーバーに保存先が無い
   const [notify, setNotify] = useState(true);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  const clearUser = useAppStore((state) => state.clearUser);
-
   /**
    * ログアウト。
-   * TODO [BACKEND] await client.post("/api/auth/logout");
-   *   認証を作ったら、ここでトークンも破棄してログイン画面へ送る。
+   *
+   * ⚠️ サーバーを呼ぶ必要はない。JWT はサーバーに状態を持たない仕組みなので、
+   *   手元のトークンを捨てれば終わり（企画書 §7 の /api/auth/logout は不要）。
    */
   const handleLogout = () => {
-    clearUser();
+    clearSession();
     // ⚠️ replace: true。履歴に残すと「戻る」でアプリ内に入れてしまう
     navigate("/login", { replace: true });
+  };
+
+  /** F-03 表示中のグループへの位置共有を切り替える */
+  const handleSharingChange = async (next) => {
+    if (!currentGroupId) return;
+
+    // 先に画面を動かす（楽観的更新）。失敗したら元に戻す
+    setSharing(next);
+    try {
+      await setGroupShare(currentGroupId, next);
+    } catch {
+      setSharing(!next);
+    }
   };
 
   useEffect(() => {
     fetchMe().then(setMe);
   }, []);
+
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    // ⚠️ 共有の ON/OFF はグループごとの値。表示中のグループのものを読む
+    fetchGroup(currentGroupId).then((group) => setSharing(group.shareLocation));
+  }, [currentGroupId]);
 
   return (
     <div className="bg-canvas h-full overflow-y-auto pb-8">
@@ -79,9 +101,13 @@ export default function SettingsPage() {
       <Card>
         <Row
           label="位置を共有する"
-          note="オフにすると、グループの全員からあなたの位置が見えなくなります"
+          note="オフにすると、このグループの全員からあなたの位置が見えなくなります"
         >
-          <Switch checked={sharing} onChange={setSharing} label="位置を共有する" />
+          <Switch
+            checked={sharing}
+            onChange={handleSharingChange}
+            label="位置を共有する"
+          />
         </Row>
         <Row label="通知" note="到着・出発・SOS・電池低下をお知らせします">
           <Switch checked={notify} onChange={setNotify} label="通知" />

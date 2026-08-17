@@ -10,7 +10,7 @@ import {
   CheckCheck,
   Inbox,
 } from "lucide-react";
-import { fetchNotifications, markAllNotificationsRead } from "@/api/mockApi";
+import { fetchNotifications, markAllNotificationsRead } from "@/api";
 import { formatTime, formatDateDivider } from "@/lib/format";
 import { useAppStore } from "@/store";
 

@@ -26,12 +26,11 @@ import {
   sendPing,
   fetchLatestPing,
   removeGroupMember,
-} from "@/api/mockApi";
+} from "@/api";
 import { formatLastUpdated, movementLabel, formatTime } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
-import Switch from "@/components/common/Switch";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 /** 移動手段ごとのアイコン。※キーの値は大文字始まりにすること（JSXの決まり）*/
@@ -95,8 +94,8 @@ export default function MemberDetailPage() {
     let alive = true; // 取得中に別の人へ遷移したとき、古い結果を捨てるための印
 
     setLoading(true);
-    // 2つの取得は互いに独立なので、並行して待つ
-    Promise.all([fetchMember(id), fetchMe(), fetchLatestPing(id)]).then(
+    // 3つの取得は互いに独立なので、並行して待つ
+    Promise.all([fetchMember(currentGroupId, id), fetchMe(), fetchLatestPing(id)]).then(
       ([foundMember, foundMe, foundPing]) => {
         if (!alive) return;
         setMember(foundMember);
@@ -110,7 +109,7 @@ export default function MemberDetailPage() {
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, currentGroupId]);
 
   if (loading) {
     return <CenterMessage text="読み込み中…" />;
@@ -127,31 +126,49 @@ export default function MemberDetailPage() {
   }
 
   const isOff = !member.shareLocation;
-  const position = [member.lat, member.lng];
-  const distance = me ? distanceMeters(me, member) : null;
+
+  // ⚠️ 共有オフ・位置未送信だと座標が来ない。地図を描かせない
+  const hasPosition = member.lat != null && member.lng != null;
+  const position = hasPosition ? [member.lat, member.lng] : null;
+
+  // ⚠️ 自分の座標がまだ無いと NaN になり、画面に「NaNkm」と出る。
+  //   両方そろっているときだけ計算する（/api/me は座標を返さない）
+  const canMeasure = hasPosition && me?.lat != null && me?.lng != null;
+  const distance = canMeasure ? distanceMeters(me, member) : null;
+
   const moveLabel = movementLabel(member.movement);
   const MoveIcon = MOVEMENT_ICON[member.movement];
 
   return (
     <div className="bg-canvas flex h-svh flex-col">
       {/* ===== 上: 地図 ===== */}
-      <div className="relative h-[45%] shrink-0">
-        <MapContainer
-          center={position}
-          zoom={16}
-          zoomControl={false}
-          scrollWheelZoom={false}
-          className="absolute inset-0 h-full w-full"
-        >
-          <TileLayer
-            key={isNight ? "dark" : "light"}
-            url={isNight ? TILE_DARK : TILE_LIGHT}
-            attribution={TILE_ATTRIBUTION}
-            subdomains={TILE_SUBDOMAINS}
-            maxZoom={MAX_ZOOM}
-          />
-          <Marker position={position} icon={createMemberIcon(member)} />
-        </MapContainer>
+      <div className="bg-subtle relative h-[45%] shrink-0">
+        {hasPosition ? (
+          <MapContainer
+            center={position}
+            zoom={16}
+            zoomControl={false}
+            scrollWheelZoom={false}
+            className="absolute inset-0 h-full w-full"
+          >
+            <TileLayer
+              key={isNight ? "dark" : "light"}
+              url={isNight ? TILE_DARK : TILE_LIGHT}
+              attribution={TILE_ATTRIBUTION}
+              subdomains={TILE_SUBDOMAINS}
+              maxZoom={MAX_ZOOM}
+            />
+            <Marker position={position} icon={createMemberIcon(member)} />
+          </MapContainer>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center px-6">
+            <p className="text-ink-sub text-center text-sm">
+              {isOff
+                ? "この人は位置の共有をオフにしています"
+                : "まだ位置が送られていません"}
+            </p>
+          </div>
+        )}
 
         {/* 戻るボタン。⚠️ MapContainer の外に置くこと */}
         <button
@@ -238,25 +255,28 @@ export default function MemberDetailPage() {
 
           <hr className="border-line mb-5" />
 
-          {/* --- 共有トグル --- */}
+          {/* --- 相手の共有状態（読み取り専用）---
+              ⚠️ ここは操作できない。DB の share_location は「自分が
+              そのグループで共有するか」であって、「相手ごと」の設定は
+              存在しない（企画書 F-03）。以前はスイッチだったが、
+              押しても何も起きないため表示だけにした。
+              自分の共有を切り替えるのは設定画面（SC-T01）。 */}
           <div className="mb-8">
             <div className="flex items-center justify-between gap-4">
               <span className="text-ink text-[15px] font-semibold">
-                この人と位置を共有
+                この人の位置共有
               </span>
-              {/* TODO [BACKEND] PATCH /api/members/:id/share */}
-              <Switch
-                checked={sharing}
-                onChange={setSharing}
-                label="この人と位置を共有"
-              />
+              <span
+                className={`text-sm font-semibold ${sharing ? "text-safe" : "text-idle"}`}
+              >
+                {sharing ? "オン" : "オフ"}
+              </span>
             </div>
             <p className="text-ink-sub mt-1 text-xs">
-              オフにすると、相手からあなたの位置が見えなくなります
+              相手がオフにしている間は、位置も電池残量も届きません
             </p>
           </div>
 
-          {/* TODO [BACKEND] DELETE /api/groups/:groupId/members/:id */}
           <button
             type="button"
             disabled={busy}

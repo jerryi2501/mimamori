@@ -31,6 +31,7 @@ import { formatLastUpdated, movementLabel, formatTime } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
+import { subscribe } from "@/lib/realtime";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 /** 移動手段ごとのアイコン。※キーの値は大文字始まりにすること（JSXの決まり）*/
@@ -110,6 +111,18 @@ export default function MemberDetailPage() {
       alive = false;
     };
   }, [id, currentGroupId]);
+
+  // ⭐ リアルタイム（F-11）。相手が「大丈夫だよ」を押した瞬間、または3分経って
+  //   「応答なし」になった瞬間に、この画面の帯が変わる。
+  //   ⚠️ 宛先は自分あての /user/queue/ping。呼び出しの結果は呼んだ本人にしか届かない
+  useEffect(() => {
+    return subscribe("/user/queue/ping", (incoming) => {
+      // 同じ相手あてに自分が送ったものだけを反映する
+      if (incoming.toUserId === Number(id)) {
+        setPing(incoming);
+      }
+    });
+  }, [id]);
 
   if (loading) {
     return <CenterMessage text="読み込み中…" />;

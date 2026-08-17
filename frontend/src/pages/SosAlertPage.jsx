@@ -14,6 +14,7 @@ import { formatLastUpdated } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
+import { subscribe } from "@/lib/realtime";
 
 /** 発信位置を囲む円の半径（メートル）。だいたいの場所を示すだけ */
 const AREA_RADIUS = 120;
@@ -51,6 +52,20 @@ export default function SosAlertPage() {
     return () => {
       alive = false;
     };
+  }, [id, currentGroupId]);
+
+  // ⭐ リアルタイム（企画書 §6）。誰かが「向かいます」を押した瞬間や、
+  //   発信者が解除した瞬間に、この画面が自動で変わる
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    return subscribe(`/topic/group/${currentGroupId}/sos`, (incoming) => {
+      // ⚠️ 同じグループの別の通報も同じ宛先に流れてくる。今開いている
+      //   ものだけを反映する
+      if (String(incoming.id) === String(id)) {
+        setAlert(incoming);
+      }
+    });
   }, [id, currentGroupId]);
 
   const handleRespond = async () => {

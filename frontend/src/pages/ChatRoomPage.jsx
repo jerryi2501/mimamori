@@ -9,6 +9,21 @@ import {
 } from "@/api";
 import { formatTime, formatDateDivider } from "@/lib/format";
 import { useAppStore } from "@/store";
+import { subscribe } from "@/lib/realtime";
+
+/**
+ * 同じメッセージを二度並べない。
+ *
+ * ⚠️ 自分の発言は2つの経路で戻ってくる: POST の戻り値と、リアルタイム配信。
+ *   どちらが先に着くかは決まっていないので、両方でこれを通す。
+ *   （最初は POST 側で素通しにしていて、配信が先に届いた場合に
+ *   吹き出しが二重になり、React が key の重複を警告していた）
+ */
+function appendUnique(messages, incoming) {
+  return messages.some((existing) => existing.id === incoming.id)
+    ? messages
+    : [...messages, incoming];
+}
 
 /**
  * SC-C02 トークルーム
@@ -64,6 +79,21 @@ export default function ChatRoomPage() {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
+  // ⭐ リアルタイム（企画書 §6）。相手の発言が待たずに出る
+  useEffect(() => {
+    if (!conversation) return;
+
+    return subscribe(`/topic/conversation/${conversation.id}/message`, (message) => {
+      setMessages((prev) =>
+        appendUnique(prev, {
+          ...message,
+          color: message.senderColor,
+          initial: message.senderName?.slice(0, 1) || "?",
+        })
+      );
+    });
+  }, [conversation]);
+
   const handleSubmit = async (event) => {
     event.preventDefault(); // ページ全体の再読み込みを止める
 
@@ -79,7 +109,7 @@ export default function ChatRoomPage() {
       // ⚠️ await を setMessages のコールバックの中に書かないこと。
       //   あの関数は async ではないので構文エラーになる
       const saved = await sendMessage(conversation.id, body);
-      setMessages((prev) => [...prev, saved]);
+      setMessages((prev) => appendUnique(prev, saved));
     } catch {
       // 送れなかったので入力を戻す。黙って消えるのがいちばん困る
       setDraft(body);

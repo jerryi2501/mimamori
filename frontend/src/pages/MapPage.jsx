@@ -13,6 +13,7 @@ import {
 } from "@/lib/mapConfig";
 import { fetchMembers, fetchUnreadCount } from "@/api";
 import { useAppStore } from "@/store";
+import { subscribe } from "@/lib/realtime";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import MemberList from "@/components/map/MemberList";
 import MapControls from "@/components/map/MapControls";
@@ -42,6 +43,21 @@ export default function MapPage() {
       return;
     }
     fetchMembers(currentGroupId).then(setMembers);
+  }, [currentGroupId]);
+
+  // ⭐ リアルタイム（企画書 §6）。家族が動くと、こちらの地図が自動で追いつく
+  useEffect(() => {
+    if (!currentGroupId) return;
+
+    return subscribe(`/topic/group/${currentGroupId}/location`, (update) => {
+      setMembers((prev) =>
+        prev.map((member) =>
+          // ⚠️ 一覧を取り直さない。名前や役割は変わっていないので、
+          //   その人の位置の部分だけ上書きする
+          member.id === update.userId ? { ...member, ...update } : member
+        )
+      );
+    });
   }, [currentGroupId]);
 
   /** ピンまたは一覧の行から SC-M02 メンバー詳細へ移動する */

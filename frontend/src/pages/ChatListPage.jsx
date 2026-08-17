@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Users } from "lucide-react";
 import { fetchConversations } from "@/api";
 import { formatChatListTime } from "@/lib/format";
+import { useAppStore } from "@/store";
 
 /**
  * SC-C01 トーク一覧
@@ -10,11 +11,12 @@ import { formatChatListTime } from "@/lib/format";
  */
 export default function ChatListPage() {
   const navigate = useNavigate();
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
   const [conversations, setConversations] = useState([]);
 
   useEffect(() => {
-    fetchConversations().then(setConversations);
-  }, []);
+    fetchConversations(currentGroupId).then(setConversations);
+  }, [currentGroupId]);
 
   return (
     <div className="bg-canvas flex h-svh flex-col">
@@ -39,6 +41,14 @@ export default function ChatListPage() {
             onClick={() => navigate(`/chat/${conversation.id}`)}
           />
         ))}
+        {/* ⚠️ 行き止まりにしない。グループ未参加だとここに来る */}
+        {conversations.length === 0 && (
+          <li className="text-ink-muted px-4 py-10 text-center text-sm">
+            {currentGroupId
+              ? "トークはまだありません"
+              : "先にグループを作るか、参加してください"}
+          </li>
+        )}
       </ul>
     </div>
   );

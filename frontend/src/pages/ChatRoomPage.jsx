@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Send } from "lucide-react";
-import { fetchConversation, fetchMessages, sendMessage } from "@/api";
+import {
+  fetchConversation,
+  fetchMessages,
+  sendMessage,
+  markConversationRead,
+} from "@/api";
 import { formatTime, formatDateDivider } from "@/lib/format";
+import { useAppStore } from "@/store";
 
 /**
  * SC-C02 トークルーム
@@ -12,10 +18,16 @@ export default function ChatRoomPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const myId = useAppStore((state) => state.user?.id);
+  const currentGroupId = useAppStore((state) => state.currentGroupId);
+
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  // ⚠️ conversation の null だけでは「読み込み中」と「見つからない」を
+  //   区別できない。取得が終わったかを別に持つ
+  const [loaded, setLoaded] = useState(false);
 
   // 一番下の目印。新着のたびにここへスクロールする
   const bottomRef = useRef(null);
@@ -23,18 +35,29 @@ export default function ChatRoomPage() {
   useEffect(() => {
     let alive = true;
 
-    Promise.all([fetchConversation(id), fetchMessages(id)]).then(
-      ([foundConversation, foundMessages]) => {
-        if (!alive) return;
-        setConversation(foundConversation);
-        setMessages(foundMessages);
-      }
-    );
+    // ⚠️ 並行にできない。URL が "direct-4" のとき、会話は取りに行って
+    //   初めて作られる。数値の id が分かってからでないとメッセージを
+    //   取れないので、順番に待つ。
+    setLoaded(false);
+
+    (async () => {
+      const found = await fetchConversation(id, currentGroupId).catch(() => null);
+      if (!alive) return;
+
+      setConversation(found);
+      setLoaded(true);
+
+      if (!found) return;
+
+      setMessages(await fetchMessages(found.id));
+      // 開いた時点で既読にする。一覧のバッジがこれを見ている
+      await markConversationRead(found.id);
+    })();
 
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, currentGroupId]);
 
   // メッセージが増えたら一番下へ
   useEffect(() => {
@@ -45,15 +68,43 @@ export default function ChatRoomPage() {
     event.preventDefault(); // ページ全体の再読み込みを止める
 
     const body = draft.trim();
-    if (body === "" || sending) return;
+    if (body === "" || sending || !conversation) return;
 
     setSending(true);
     setDraft(""); // 先に空にする。返事を待つと入力が固まって感じる
 
-    const saved = await sendMessage(id, body);
-    setMessages((prev) => [...prev, saved]);
-    setSending(false);
+    // ⚠️ URL の id ではなく conversation.id を使う。"direct-4" のままだと
+    //   数値でないのでサーバーが受け取れない
+    try {
+      // ⚠️ await を setMessages のコールバックの中に書かないこと。
+      //   あの関数は async ではないので構文エラーになる
+      const saved = await sendMessage(conversation.id, body);
+      setMessages((prev) => [...prev, saved]);
+    } catch {
+      // 送れなかったので入力を戻す。黙って消えるのがいちばん困る
+      setDraft(body);
+    } finally {
+      setSending(false);
+    }
   };
+
+  // ⚠️ 行き止まりにしない。URL 直打ち・権限が無い・退出済みでここに来る
+  if (loaded && !conversation) {
+    return (
+      <div className="bg-canvas flex h-svh flex-col items-center justify-center gap-4 px-6">
+        <p className="text-ink-sub text-center text-sm">
+          このトークは見つかりませんでした
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/chat", { replace: true })}
+          className="text-brand text-sm font-semibold"
+        >
+          トーク一覧へ
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-canvas flex h-svh flex-col">
@@ -91,6 +142,7 @@ export default function ChatRoomPage() {
               message={message}
               previous={messages[index - 1]}
               isGroup={conversation?.type === "group"}
+              myId={myId}
             />
           ))
         )}
@@ -127,8 +179,10 @@ export default function ChatRoomPage() {
  * 吹き出し1つ。
  * @param previous 1つ前のメッセージ。日付区切りと名前の省略の判断に使う
  */
-function MessageBubble({ message, previous, isGroup }) {
-  const isMine = message.senderId === 0;
+function MessageBubble({ message, previous, isGroup, myId }) {
+  // ⚠️ モック時代は senderId === 0 が「自分」だった。実 API では
+  //   自分にも普通の users.id が付くので、ログイン中の id と比べる
+  const isMine = message.senderId === myId;
 
   // 日付が変わったら区切りを出す
   const showDivider =

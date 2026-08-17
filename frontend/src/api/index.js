@@ -1,119 +1,12 @@
 /**
  * バックエンドとの接続点。画面はここだけを import する（`@/api`）。
  *
- * トーク（F-15）以外はすべて Spring Boot の実 API を呼ぶ。
- * トークだけまだモック（`TODO [BACKEND]` が残っているものがそれ）。
+ * 全機能が Spring Boot の実 API につながっている。モックは残っていない。
  *
- * ⚠️ 画面側は「実 API かモックか」を知らなくていい。差し替えはこのファイルの中で完結する。
  * ⚠️ HTTP の設定（baseURL・トークン・エラーの日本語化）は ./client.js。
  *   ここは「どのURLを叩き、どんな形で画面に渡すか」だけを持つ。
  */
 import client from "./client";
-
-/**
- * 家族メンバーと最新の位置。
- *
- * ⚠️ もう地図には使わない（実 API に置き換え済み）。
- *   まだモックのままのトークが「相手の名前と色」を引くために残している。
- */
-const MOCK_MEMBERS = [
-  {
-    id: 1,
-    name: "まま",
-    initial: "ま",
-    color: "#3B82F6",
-    lat: 34.1812,
-    lng: 131.469,
-    batteryLevel: 80,
-    shareLocation: true,
-    placeName: "自宅",
-    moving: false,
-    address: "山口市中央 2丁目 付近",
-    movement: "still", // 'still' | 'walk' | 'bike' | 'car'
-    speedKmh: null,
-    // 「たった今」
-    lastUpdatedAt: new Date(Date.now() - 20 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    name: "ぱぱ",
-    initial: "ぱ",
-    color: "#0EA5E9",
-    lat: 34.1798,
-    lng: 131.4801,
-    batteryLevel: 60,
-    shareLocation: true,
-    placeName: "職場",
-    moving: false,
-    address: "山口市小郡令和 1丁目 付近",
-    movement: "still", // 'still' | 'walk' | 'bike' | 'car'
-    speedKmh: null,
-    // 5分前
-    lastUpdatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    name: "えみ",
-    initial: "え",
-    color: "#EC4899",
-    lat: 34.1761,
-    lng: 131.4712,
-    batteryLevel: 90,
-    shareLocation: true,
-    placeName: "学校",
-    moving: false,
-    address: "山口市宮野下 付近",
-    movement: "still", // 'still' | 'walk' | 'bike' | 'car'
-    speedKmh: null,
-    // 1時間前（古い情報の例）
-    lastUpdatedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 4,
-    name: "りく",
-    initial: "り",
-    color: "#8B5CF6",
-    lat: 34.1776,
-    lng: 131.4768,
-    batteryLevel: 15,
-    shareLocation: true,
-    placeName: null,
-    moving: true,
-    address: "山口市湯田温泉 4丁目 付近",
-    movement: "car", // 'still' | 'walk' | 'bike' | 'car'
-    speedKmh: 32,
-    // 2分前
-    lastUpdatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 5,
-    name: "けん",
-    initial: "け",
-    color: "#F59E0B",
-    lat: 34.1745,
-    lng: 131.4655,
-    batteryLevel: null, // 共有オフなので不明
-    shareLocation: false,
-    placeName: null,
-    moving: false,
-    address: null, // 共有オフなので住所も分からない。※でっち上げない
-    movement: "still", // 'still' | 'walk' | 'bike' | 'car'
-    speedKmh: null,
-    lastUpdatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-/**
- * モックの中での「自分」。
- *
- * ⚠️ 実 API に移した機能はこれを使わない。まだモックのトーク・呼び出しが
- *   送信者名を埋めるためだけに残している。id 0 は実在しない番号で、
- *   モック側で「自分の発言」を見分ける印として使っている。
- */
-const MOCK_ME = { id: 0, name: "わたし" };
-
-/** 通信しているように見せるための待ち時間 */
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * サーバーの DTO を、画面が使ってきた形にそろえる変換層。
@@ -186,9 +79,6 @@ export async function fetchHistory(memberId, dayOffset = 0) {
   });
 }
 
-/** 「n分前」の ISO 文字列。未来の時刻にならないようにするため */
-const minutesAgo = (n) => new Date(Date.now() - n * 60 * 1000).toISOString();
-
 /** セーフゾーン一覧（SC-P01） */
 export async function fetchPlaces(groupId) {
   if (!groupId) return [];
@@ -217,179 +107,90 @@ export async function fetchZoneEvents(groupId, limit) {
 }
 
 /**
- * トーク一覧（SC-C01）。
- * id の形: "group-1" / "direct-<メンバーID>"
- * → メンバー詳細から直接 /chat/direct-4 へ飛べるようにするため。
+ * トーク一覧（SC-C01）。グループトークが先頭、下に個人トーク。
+ *
+ * ⚠️ グループトークはサーバーが「無ければ作る」。後からグループに入った
+ *   人にも見えるようにするため、参加行もそのとき足される。
  */
-const MOCK_CONVERSATIONS = [
-  {
-    id: "group-1",
-    type: "group",
-    name: "家族",
-    memberCount: 5,
-    lastSender: "りく",
-    lastBody: "いま駅にいるよ",
-    lastAt: minutesAgo(12),
-    unread: 2,
-  },
-  {
-    id: "direct-1",
-    type: "direct",
-    memberId: 1,
-    name: "まま",
-    initial: "ま",
-    color: "#3B82F6",
-    lastSender: null,
-    lastBody: "ありがとう！",
-    lastAt: minutesAgo(95),
-    unread: 0,
-  },
-  {
-    id: "direct-4",
-    type: "direct",
-    memberId: 4,
-    name: "りく",
-    initial: "り",
-    color: "#8B5CF6",
-    lastSender: null,
-    lastBody: "もうすぐ着く",
-    lastAt: minutesAgo(320),
-    unread: 1,
-  },
-];
+export async function fetchConversations(groupId) {
+  if (!groupId) return [];
 
-/**
- * TODO [BACKEND] const res = await client.get("/api/conversations");
- */
-export async function fetchConversations() {
-  await delay(250);
-  return MOCK_CONVERSATIONS;
+  const list = await client.get("/api/conversations", { params: { groupId } });
+  return list.map(toConversation);
 }
 
 /**
- * 会話1件の情報。見つからなければ null。
- * ※ 個人トークがまだ無い相手でも、メンバー情報から作って返す。
+ * 会話1件（SC-C02）。
+ *
+ * ⚠️ 画面の URL は数値の id か "direct-<相手のユーザーID>" のどちらか。
+ *   後者はメンバー詳細から直接飛んでくる形で、会話がまだ存在しない
+ *   ことがある。その場合サーバーが作って返す（get-or-create）。
+ *   返ってきた conversation.id（数値）を、以降のメッセージ取得や
+ *   送信に使うこと。URL の文字列をそのまま使ってはいけない。
  */
-export async function fetchConversation(conversationId) {
-  await delay(150);
+export async function fetchConversation(conversationId, groupId) {
+  const direct = /^direct-(\d+)$/.exec(String(conversationId));
 
-  const found = MOCK_CONVERSATIONS.find((c) => c.id === conversationId);
-  if (found) return found;
+  if (direct) {
+    if (!groupId) return null;
+    return toConversation(
+      await client.get(`/api/conversations/direct/${direct[1]}`, {
+        params: { groupId },
+      })
+    );
+  }
 
-  // "direct-4" のような形なら、その場で会話を用意する
-  const match = /^direct-(\d+)$/.exec(conversationId);
-  if (!match) return null;
+  try {
+    return toConversation(await client.get(`/api/conversations/${conversationId}`));
+  } catch {
+    // 権限が無い・存在しない。画面は「見つかりません」を出したい
+    return null;
+  }
+}
 
-  const member = MOCK_MEMBERS.find((m) => m.id === Number(match[1]));
-  if (!member) return null;
-
+/** 会話一覧の1行を、画面が使ってきた形にそろえる */
+function toConversation(dto) {
   return {
-    id: conversationId,
-    type: "direct",
-    memberId: member.id,
-    name: member.name,
-    initial: member.initial,
-    color: member.color,
-    lastBody: null,
-    lastAt: null,
-    unread: 0,
+    ...dto,
+    color: dto.memberColor,
+    initial: dto.name?.slice(0, 1) || "?",
   };
 }
 
-/** 会話ごとのメッセージ。senderId が 0 なら自分（MOCK_ME）*/
-const MOCK_MESSAGES = {
-  "group-1": [
-    {
-      id: 1,
-      senderId: 1,
-      senderName: "まま",
-      initial: "ま",
-      color: "#3B82F6",
-      body: "今日は何時に帰る？",
-      sentAt: minutesAgo(180),
-    },
-    {
-      id: 2,
-      senderId: 0,
-      senderName: "わたし",
-      body: "18時ごろになりそう",
-      sentAt: minutesAgo(170),
-    },
-    {
-      id: 3,
-      senderId: 4,
-      senderName: "りく",
-      initial: "り",
-      color: "#8B5CF6",
-      body: "いま駅にいるよ",
-      sentAt: minutesAgo(12),
-    },
-  ],
-  "direct-1": [
-    {
-      id: 1,
-      senderId: 0,
-      senderName: "わたし",
-      body: "牛乳買っておいたよ",
-      sentAt: minutesAgo(100),
-    },
-    {
-      id: 2,
-      senderId: 1,
-      senderName: "まま",
-      initial: "ま",
-      color: "#3B82F6",
-      body: "ありがとう！",
-      sentAt: minutesAgo(95),
-    },
-  ],
-  "direct-4": [
-    {
-      id: 1,
-      senderId: 0,
-      senderName: "わたし",
-      body: "気をつけてね",
-      sentAt: minutesAgo(330),
-    },
-    {
-      id: 2,
-      senderId: 4,
-      senderName: "りく",
-      initial: "り",
-      color: "#8B5CF6",
-      body: "もうすぐ着く",
-      sentAt: minutesAgo(320),
-    },
-  ],
-};
+/** メッセージ履歴（古い順）。⚠️ conversationId は数値 */
+export async function fetchMessages(conversationId, limit) {
+  const list = await client.get(`/api/conversations/${conversationId}/messages`, {
+    params: { limit },
+  });
 
-/**
- * TODO [BACKEND] const res = await client.get(
- *   `/api/conversations/${conversationId}/messages`);
- */
-export async function fetchMessages(conversationId) {
-  await delay(250);
-  return MOCK_MESSAGES[conversationId] ?? [];
+  return list.map((message) => ({
+    ...message,
+    color: message.senderColor,
+    initial: message.senderName?.slice(0, 1) || "?",
+  }));
 }
 
 /**
- * メッセージを送る。保存されたメッセージを返す。
+ * メッセージを送る。保存されたメッセージが返る。
  *
- * TODO [BACKEND] const res = await client.post(
- *   `/api/conversations/${conversationId}/messages`, { body });
- * TODO [REALTIME] 保存後はサーバーが /topic/group/{id}/message で配信する。
+ * TODO [REALTIME] 保存後はサーバーが /topic/conversation/{id} で配信する。
  *   受信側は STOMP の購読で受け取るので、この戻り値は「自分の送信分」だけ。
  */
 export async function sendMessage(conversationId, body) {
-  await delay(150);
+  const saved = await client.post(`/api/conversations/${conversationId}/messages`, {
+    body,
+  });
 
   return {
-    id: Date.now(), // 仮のID。本来はサーバーが採番する
-    senderId: 0,
-    senderName: MOCK_ME.name,
-    body,
-    sentAt: new Date().toISOString(),
+    ...saved,
+    color: saved.senderColor,
+    initial: saved.senderName?.slice(0, 1) || "?",
   };
+}
+
+/** 既読位置を更新する（未読件数のリセット） */
+export async function markConversationRead(conversationId) {
+  return client.put(`/api/conversations/${conversationId}/read`);
 }
 
 /**

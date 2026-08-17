@@ -28,6 +28,7 @@ export default function SosPage() {
   const [members, setMembers] = useState([]);
   const [alert, setAlert] = useState(null); // 発信済みなら中身が入る
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchMe().then(setMe);
@@ -38,19 +39,34 @@ export default function SosPage() {
   }, [currentGroupId]);
 
   const handleSend = useCallback(async () => {
-    if (!me) return;
+    if (!currentGroupId) return;
     setBusy(true);
-    const created = await sendSos({ lat: me.lat, lng: me.lng });
-    setAlert(created);
-    setBusy(false);
-  }, [me]);
+    setError(null);
+
+    // ⚠️ 座標は付けずに送ってよい。/api/me は位置を返さないので、
+    //   サーバーが直近の位置で代用する。一度も送っていなければ断られる
+    try {
+      setAlert(await sendSos({ groupId: currentGroupId, lat: me?.lat, lng: me?.lng }));
+    } catch (caught) {
+      setError(caught.message);
+    } finally {
+      setBusy(false);
+    }
+  }, [me, currentGroupId]);
 
   const handleUndo = useCallback(async () => {
     if (!alert) return;
     setBusy(true);
-    await resolveSos(alert.id);
-    setAlert(null);
-    setBusy(false);
+    setError(null);
+
+    try {
+      await resolveSos(alert.id);
+      setAlert(null);
+    } catch (caught) {
+      setError(caught.message);
+    } finally {
+      setBusy(false);
+    }
   }, [alert]);
 
   // ⚠️ フックは条件分岐の外で必ず両方呼ぶ（rules-of-hooks）
@@ -102,6 +118,14 @@ export default function SosPage() {
                 ? "間違えた場合は下のボタンで止められます"
                 : `タップすると、家族${members.length}人へ位置つきで知らせます`}
           </p>
+
+          {/* ⚠️ 失敗を黙らせない。位置が取れないまま送れたことにするのが
+              いちばん危険（家族が誤った場所へ向かう） */}
+          {error && (
+            <p role="alert" className="text-alert mt-3 text-[13px] font-semibold">
+              {error}
+            </p>
+          )}
         </div>
 
         {/* ===== 中央の赤い円 ===== */}

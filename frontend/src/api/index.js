@@ -1,8 +1,8 @@
 /**
  * バックエンドとの接続点。画面はここだけを import する（`@/api`）。
  *
- * 認証・グループ・位置・場所・通知は Spring Boot の実 API を呼ぶ。
- * SOS / 呼び出し / トークはまだモック（`TODO [BACKEND]` が残っているものがそれ）。
+ * トーク（F-15）以外はすべて Spring Boot の実 API を呼ぶ。
+ * トークだけまだモック（`TODO [BACKEND]` が残っているものがそれ）。
  *
  * ⚠️ 画面側は「実 API かモックか」を知らなくていい。差し替えはこのファイルの中で完結する。
  * ⚠️ HTTP の設定（baseURL・トークン・エラーの日本語化）は ./client.js。
@@ -14,7 +14,7 @@ import client from "./client";
  * 家族メンバーと最新の位置。
  *
  * ⚠️ もう地図には使わない（実 API に置き換え済み）。
- *   まだモックのままのトーク・SOS が「相手の名前と色」を引くために残している。
+ *   まだモックのままのトークが「相手の名前と色」を引くために残している。
  */
 const MOCK_MEMBERS = [
   {
@@ -392,148 +392,66 @@ export async function sendMessage(conversationId, body) {
   };
 }
 
-/** 送信済みの SOS を覚えておく箱。※本来は sos_alerts テーブル */
-const sosStore = new Map();
-
-/** 通知一覧からたどれるデモ用の SOS。この ID だけは常に存在する扱いにする */
-const DEMO_SOS_ID = 9001;
-
 /**
  * SOS を発信する（F-04 / SC-S01）。
  *
- * TODO [BACKEND] const res = await client.post("/api/sos", { lat, lng });
+ * ⚠️ 座標は送らなくてよい。/api/me は位置を返さないので、たいてい
+ *   undefined になる。その場合サーバーが直近の位置で代用する。
+ *   どちらも無ければ「位置情報が取得できないため通報できません」と断られる。
+ *
  * TODO [REALTIME] サーバーが /topic/group/{id}/sos で全員へ配信する。
  *   発信中は位置送信の間隔を 5秒 に短縮する（企画書 §6）。
  */
-export async function sendSos({ lat, lng }) {
-  await delay(600); // 通信の重さを感じさせる
-
-  const alert = {
-    id: Date.now(),
-    userId: 0, // 自分が発信した場合
-    status: "ACTIVE", // 'ACTIVE' | 'RESOLVED'
-    lat,
-    lng,
-    triggeredAt: new Date().toISOString(),
-    responderIds: [], // 「向かっています」と答えた人
-  };
-
-  sosStore.set(String(alert.id), alert);
-  return alert;
+export async function sendSos({ groupId, lat, lng }) {
+  return client.post("/api/sos", { groupId, lat, lng });
 }
 
-/**
- * SOS を解除する。
- * TODO [BACKEND] await client.put(`/api/sos/${sosId}/resolve`);
- */
+/** SOS を解除する。⚠️ 発信した本人しかできない */
 export async function resolveSos(sosId) {
-  await delay(400);
-
-  const alert = sosStore.get(String(sosId));
-  if (alert) alert.status = "RESOLVED";
-
-  return { id: Number(sosId), status: "RESOLVED" };
+  return client.put(`/api/sos/${sosId}/resolve`);
 }
-
-/** 呼び出しの状態（企画書 §2.3）*/
-// SENT = 送信済み・応答待ち / OK = 大丈夫 / LATER = あとで返す / NO_RESPONSE = 無応答
-/** これを過ぎたら「応答なし」とみなす（企画書 §2.3）*/
-const PING_TIMEOUT_MS = 3 * 60 * 1000;
-
-/** 送信済みの呼び出しを覚えておく箱。※本来はサーバーのテーブル */
-const pingStore = new Map();
 
 /**
  * 呼び出しを送る（F-11 / 親側）。
  *
- * TODO [BACKEND] const res = await client.post("/api/pings", { targetUserId });
  * TODO [REALTIME] サーバーが /user/queue/ping で相手だけに配信する。
  *   相手がアプリを閉じていれば Web Push にフォールバックする。
  */
 export async function sendPing(targetUserId) {
-  await delay(400);
-
-  const ping = {
-    id: Date.now(),
-    fromUserId: 0,
-    fromName: MOCK_ME.name,
-    toUserId: Number(targetUserId),
-    status: "SENT",
-    sentAt: new Date().toISOString(),
-    respondedAt: null,
-  };
-
-  pingStore.set(String(ping.id), ping);
-  return ping;
+  return client.post("/api/pings", { targetUserId: Number(targetUserId) });
 }
 
-/**
- * 呼び出し1件を取得する（子側の受信画面が使う）。
- *
- * ※ デモ用: 保存されていない ID でも、送り主を「まま」にして作って返す。
- *   実際は WebSocket で受け取った ping をそのまま表示する。
- */
+/** 呼び出し1件（SC-M04 の受信画面）。送った人と呼ばれた人だけが読める */
 export async function fetchPing(pingId) {
-  await delay(200);
-
-  const found = pingStore.get(String(pingId));
-  if (found) return found;
-
-  return {
-    id: Number(pingId),
-    fromUserId: 1,
-    fromName: "まま",
-    toUserId: 4,
-    status: "SENT",
-    sentAt: new Date().toISOString(),
-    respondedAt: null,
-  };
+  return client.get(`/api/pings/${pingId}`);
 }
 
 /**
  * 呼び出しに応答する（子側）。
  *
  * @param {"OK"|"LATER"} status
- * TODO [BACKEND] await client.put(`/api/pings/${pingId}/respond`, { status });
  */
 export async function respondToPing(pingId, status) {
-  await delay(300);
-
-  const ping = pingStore.get(String(pingId));
-  if (ping) {
-    ping.status = status;
-    ping.respondedAt = new Date().toISOString();
-  }
-
-  return { id: Number(pingId), status };
+  return client.put(`/api/pings/${pingId}/respond`, { status });
 }
+
 /**
- * その相手あての最新の呼び出しを1件返す。無ければ null。
+ * その相手に自分が送った最新の呼び出し。一度も送っていなければ null。
  *
- * ※ 「3分経ったら NO_RESPONSE」の判定はここで行う。
- *   保存時に決められない値なので、読むたびに計算する。
- *   実際のバックエンドでも同じ考え方になる。
- *
- * TODO [BACKEND] const res = await client.get(
- *   `/api/pings/latest`, { params: { targetUserId } });
+ * ⚠️ 「3分で応答なし」の判定はサーバーの定期ジョブが行う。モック時代は
+ *   読むたびに計算していたが、それだと誰も画面を開いていないときに
+ *   親へ知らせられない。
+ * ⚠️ 未送信のときサーバーは 204（本文なし）を返す。axios は空文字を
+ *   渡してくるので null にそろえる。
  */
 export async function fetchLatestPing(targetUserId) {
-  await delay(150);
+  const latest = await client.get("/api/pings/latest", {
+    params: { targetUserId: Number(targetUserId) },
+  });
 
-  const latest = [...pingStore.values()]
-    .filter((ping) => ping.toUserId === Number(targetUserId))
-    .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))[0];
-
-  if (!latest) return null;
-
-  // まだ応答がなく、制限時間を過ぎている
-  const elapsed = Date.now() - new Date(latest.sentAt).getTime();
-  if (latest.status === "SENT" && elapsed > PING_TIMEOUT_MS) {
-    return { ...latest, status: "NO_RESPONSE" };
-  }
-
-  return latest;
+  return latest || null;
 }
+
 /** 参加中のグループ一覧（SC-G01） */
 export async function fetchGroups() {
   return client.get("/api/groups");
@@ -643,52 +561,25 @@ export async function fetchUnreadCount() {
 export async function markAllNotificationsRead() {
   return client.put("/api/notifications/read");
 }
-/**
- * SOS 1件を取得する（SC-S02 受信側）。
- *
- * ※ デモ用: 保存されていない ID なら「えみ」からの通報として作って返す。
- *   実際は WebSocket で受け取った内容をそのまま表示する。
- */
+/** SOS 1件（SC-S02 受信側）。グループのメンバーだけが読める */
 export async function fetchSosAlert(sosId) {
-  await delay(200);
-
-  const found = sosStore.get(String(sosId));
-  if (found) return found;
-
-  // ⚠️ 見つからない ID を勝手に別人の通報にしない。
-  //   以前はそうしていたため、リロード後に「自分の通報」が
-  //   「えみの通報」に化けていた（sosStore はメモリ上なので消える）。
-  //   デモ用に用意した 1件だけを例外にする。
-  if (Number(sosId) !== DEMO_SOS_ID) return null;
-
-  const emi = MOCK_MEMBERS.find((member) => member.id === 3);
-  return {
-    id: DEMO_SOS_ID,
-    userId: emi.id,
-    status: "ACTIVE",
-    lat: emi.lat,
-    lng: emi.lng,
-    triggeredAt: minutesAgo(3),
-    responderIds: [1], // まま が向かっている
-  };
+  // ⚠️ 権限が無い・存在しない場合はサーバーが 403 を返して throw する。
+  //   画面は「見つかりませんでした」を出したいので null に変える。
+  try {
+    return await client.get(`/api/sos/${sosId}`);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * 「向かっています」と応答する。
  *
- * TODO [BACKEND] await client.post(`/api/sos/${sosId}/respond`);
  * TODO [REALTIME] 誰が向かっているかも /topic/group/{id}/sos で全員に配る。
  *   ⚠️ これが無いと家族全員が同時に同じ場所へ向かってしまう
  */
 export async function respondToSos(sosId) {
-  await delay(300);
-
-  const alert = sosStore.get(String(sosId));
-  if (alert && !alert.responderIds.includes(0)) {
-    alert.responderIds.push(0);
-  }
-
-  return { ok: true };
+  return client.post(`/api/sos/${sosId}/respond`);
 }
 
 /**

@@ -33,6 +33,7 @@ export default function SosAlertPage() {
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -54,13 +55,14 @@ export default function SosAlertPage() {
 
   const handleRespond = async () => {
     setBusy(true);
-    await respondToSos(id);
-    // 手元も更新する。0 は自分（MOCK_ME）
-    setAlert((prev) => ({
-      ...prev,
-      responderIds: [...prev.responderIds, 0],
-    }));
-    setBusy(false);
+    try {
+      // サーバーが更新後の通報を返すので、手元で組み立て直さない
+      setAlert(await respondToSos(id));
+    } catch (caught) {
+      setError(caught.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (loading) {
@@ -89,16 +91,28 @@ export default function SosAlertPage() {
     );
   }
 
-  // ⚠️ 自分が発信した SOS（userId = 0）もこの画面で開ける（デモ用）。
-  //   members には自分が入っていないので、me も候補に混ぜる
-  const isMine = alert.userId === 0;
-  const sender = isMine ? me : members.find((member) => member.id === alert.userId);
+  // ⚠️ 自分が発信した SOS もこの画面で開ける。
+  //   members には自分も含まれるが、念のため me も候補に混ぜる
+  const isMine = alert.userId === me?.id;
+  const sender =
+    members.find((member) => member.id === alert.userId) ?? (isMine ? me : null);
   const position = [alert.lat, alert.lng];
 
   const isResolved = alert.status === "RESOLVED";
-  const iAmGoing = alert.responderIds.includes(0);
-  const responders = members.filter((member) => alert.responderIds.includes(member.id));
-  const distance = me ? distanceMeters(me, { lat: alert.lat, lng: alert.lng }) : null;
+  const iAmGoing = alert.responderIds.includes(me?.id);
+
+  // ⚠️ 自分を外す。members に自分が含まれるので、外さないと下の一覧と
+  //   「あなた」の枠に二重で出る
+  const responders = members.filter(
+    (member) => member.id !== me?.id && alert.responderIds.includes(member.id)
+  );
+
+  // ⚠️ /api/me は座標を返さないので、たいてい「不明」になる。
+  //   NaN を formatDistance に渡すと画面に「NaNkm」と出るため必ず確認する
+  const distance =
+    me?.lat != null && me?.lng != null
+      ? distanceMeters(me, { lat: alert.lat, lng: alert.lng })
+      : null;
 
   /** 地図ピン用。MOCK_ME には電池や共有状態が無いので補う */
   const senderPin = sender && {
@@ -226,6 +240,12 @@ export default function SosAlertPage() {
       {/* 自分の通報には「向かう」意味がないので出さない */}
       {!isResolved && !isMine && (
         <div className="border-line shrink-0 space-y-2 border-t px-4 py-4">
+          {error && (
+            <p role="alert" className="text-alert text-center text-xs">
+              {error}
+            </p>
+          )}
+
           <button
             type="button"
             disabled={busy || iAmGoing}

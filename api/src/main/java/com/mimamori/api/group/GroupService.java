@@ -1,12 +1,12 @@
 package com.mimamori.api.group;
 
-import com.mimamori.api.common.GeoUtils;
 import com.mimamori.api.group.dto.GroupMemberResponse;
 import com.mimamori.api.group.dto.GroupResponse;
 import com.mimamori.api.location.Location;
 import com.mimamori.api.location.LocationService;
 import com.mimamori.api.location.Movement;
 import com.mimamori.api.location.MovementEstimate;
+import com.mimamori.api.place.GeofenceService;
 import com.mimamori.api.place.Place;
 import com.mimamori.api.place.PlaceRepository;
 import com.mimamori.api.user.User;
@@ -182,29 +182,6 @@ public class GroupService {
         return (int) groupMemberRepository.countByGroupId(member.getGroup().getId());
     }
 
-    /**
-     * その位置を含むセーフゾーンの名前。無ければ null（画面は「現在地」と出す）。
-     *
-     * <p>⚠️ 円が重なっている場合は中心が近いほうを選ぶ。登録順で決めると 同じ場所でも日によって表示が変わってしまう。
-     */
-    private static String placeNameAt(List<Place> places, Location location) {
-        Place best = null;
-        double bestDistance = Double.MAX_VALUE;
-
-        for (Place place : places) {
-            double distance =
-                    GeoUtils.distanceMeters(
-                            place.getLat(), place.getLng(), location.getLat(), location.getLng());
-
-            if (distance <= place.getRadiusM() && distance < bestDistance) {
-                best = place;
-                bestDistance = distance;
-            }
-        }
-
-        return best == null ? null : best.getName();
-    }
-
     private static GroupResponse toResponse(Group group, GroupMember me, int memberCount) {
         return new GroupResponse(
                 group.getId(),
@@ -265,6 +242,6 @@ public class GroupService {
                 estimate.movement(),
                 estimate.speedKmh(),
                 estimate.movement() != Movement.STILL,
-                placeNameAt(places, latest));
+                GeofenceService.nameOfContaining(places, latest.getLat(), latest.getLng()));
     }
 }

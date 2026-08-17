@@ -3,12 +3,14 @@ package com.mimamori.api.location;
 import com.mimamori.api.common.GeoUtils;
 import com.mimamori.api.group.GroupMemberRepository;
 import com.mimamori.api.location.dto.HistoryEventResponse;
+import com.mimamori.api.location.dto.LocationBroadcast;
 import com.mimamori.api.location.dto.LocationRequest;
 import com.mimamori.api.location.dto.LocationResponse;
 import com.mimamori.api.notification.NotificationService;
 import com.mimamori.api.place.GeofenceService;
 import com.mimamori.api.place.Place;
 import com.mimamori.api.place.PlaceRepository;
+import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.user.User;
 import com.mimamori.api.user.UserRepository;
 import java.time.LocalDate;
@@ -53,6 +55,7 @@ public class LocationService {
     private final GeofenceService geofenceService;
     private final HistorySegmenter historySegmenter;
     private final NotificationService notificationService;
+    private final RealtimePublisher realtimePublisher;
 
     /** 企画書 §6 現在地の送信 */
     @Transactional
@@ -73,9 +76,44 @@ public class LocationService {
         //    地図では前の場所に居る、というずれが起きる（F-06）
         geofenceService.evaluate(userId, request.lat(), request.lng());
         notifyIfBatteryJustDropped(me, previous, request.batteryLevel());
+        broadcast(userId, location, previous);
 
         return new LocationResponse(
                 location.getId(), location.getRecordedAt(), location.getAddress());
+    }
+
+    /**
+     * 動いたことを、位置を共有しているグループにだけ配る（企画書 §6）。
+     *
+     * <p>⚠️ 宛先はグループごと。同じ人でも「家族」には見せて「バイト先」には 見せない、が成り立つ必要がある。
+     *
+     * <p>⚠️ 場所の名前もグループごとに違う。同じ座標が家族の「自宅」であっても、 バイト先のグループにその名前を漏らしてはいけない。
+     */
+    private void broadcast(Long userId, Location latest, Location previous) {
+        MovementEstimate estimate = MovementEstimate.of(previous, latest);
+
+        for (Long groupId : groupMemberRepository.findSharingGroupIds(userId)) {
+            String placeName =
+                    GeofenceService.nameOfContaining(
+                            placeRepository.findByGroupIdAndEnabledTrue(groupId),
+                            latest.getLat(),
+                            latest.getLng());
+
+            realtimePublisher.toGroup(
+                    groupId,
+                    "location",
+                    new LocationBroadcast(
+                            userId,
+                            latest.getLat(),
+                            latest.getLng(),
+                            latest.getBatteryLevel(),
+                            latest.getAddress(),
+                            latest.getRecordedAt(),
+                            estimate.movement(),
+                            estimate.speedKmh(),
+                            estimate.movement() != Movement.STILL,
+                            placeName));
+        }
     }
 
     /**

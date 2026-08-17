@@ -2,6 +2,7 @@ package com.mimamori.api.location;
 
 import com.mimamori.api.common.GeoUtils;
 import com.mimamori.api.location.dto.HistoryEventResponse;
+import com.mimamori.api.place.GeofenceService;
 import com.mimamori.api.place.Place;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,7 +48,9 @@ public class HistorySegmenter {
 
             Location stayStart = cluster.get(0);
             String address = addressOf(cluster);
-            String placeName = placeNameAt(places, stayStart);
+            String placeName =
+                    GeofenceService.nameOfContaining(
+                            places, stayStart.getLat(), stayStart.getLng());
 
             // 移動の「どこから・どこへ」に出す文字。名前が無ければ住所で代用する
             String label = placeName != null ? placeName : address;
@@ -120,29 +123,6 @@ public class HistorySegmenter {
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
-    }
-
-    /**
-     * その点を含むセーフゾーンの名前。複数と重なっていたら一番近いものを選ぶ。
-     *
-     * <p>⚠️ 「自宅」の円と「学校」の円が重なっている場合に、登録順で決めると 日によって表示が変わる。中心が近いほうを選べば安定する。
-     */
-    private String placeNameAt(List<Place> places, Location point) {
-        Place best = null;
-        double bestDistance = Double.MAX_VALUE;
-
-        for (Place place : places) {
-            double distance =
-                    GeoUtils.distanceMeters(
-                            place.getLat(), place.getLng(), point.getLat(), point.getLng());
-
-            if (distance <= place.getRadiusM() && distance < bestDistance) {
-                best = place;
-                bestDistance = distance;
-            }
-        }
-
-        return best == null ? null : best.getName();
     }
 
     private HistoryEventResponse toStay(

@@ -5,6 +5,7 @@ import com.mimamori.api.group.GroupRepository;
 import com.mimamori.api.location.Location;
 import com.mimamori.api.location.LocationRepository;
 import com.mimamori.api.notification.NotificationService;
+import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.sos.dto.SosRequest;
 import com.mimamori.api.sos.dto.SosResponse;
 import com.mimamori.api.user.User;
@@ -26,6 +27,7 @@ public class SosService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RealtimePublisher realtimePublisher;
 
     /** SC-S01 発信 */
     @Transactional
@@ -53,7 +55,10 @@ public class SosService {
                 me,
                 alert.getId());
 
-        return toResponse(alert, List.of());
+        SosResponse response = toResponse(alert, List.of());
+        realtimePublisher.toGroup(request.groupId(), "sos", response);
+
+        return response;
     }
 
     /** SC-S02 1件を読む */
@@ -78,7 +83,7 @@ public class SosService {
         alert.setStatus(SosStatus.RESOLVED);
         alert.setResolvedAt(Instant.now());
 
-        return toResponse(alert, responderIds(alertId));
+        return publish(alert);
     }
 
     /**
@@ -100,7 +105,17 @@ public class SosService {
                     new SosResponder(alert, userRepository.getReferenceById(userId)));
         }
 
-        return toResponse(alert, responderIds(alertId));
+        // ⚠️ 応答も配る。これが無いと、誰かが向かっていることが他の人の
+        //    画面に出ず、家族が次々と同じ場所へ駆けつけてしまう
+        return publish(alert);
+    }
+
+    /** 変化した通報をグループへ配り、そのまま応答として返す */
+    private SosResponse publish(SosAlert alert) {
+        SosResponse response = toResponse(alert, responderIds(alert.getId()));
+        realtimePublisher.toGroup(alert.getGroup().getId(), "sos", response);
+
+        return response;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.mimamori.api.ping;
 import com.mimamori.api.group.GroupMemberRepository;
 import com.mimamori.api.notification.NotificationService;
 import com.mimamori.api.ping.dto.PingResponse;
+import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.user.User;
 import com.mimamori.api.user.UserRepository;
 import java.time.Duration;
@@ -23,6 +24,7 @@ public class PingService {
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final RealtimePublisher realtimePublisher;
 
     /** F-11 呼び出しを送る（親側） */
     @Transactional
@@ -38,7 +40,13 @@ public class PingService {
         Ping ping =
                 pingRepository.save(new Ping(from, userRepository.getReferenceById(targetUserId)));
 
-        return toResponse(ping);
+        PingResponse response = toResponse(ping);
+
+        // ⚠️ 宛先は呼ばれた本人だけ。/topic に流すとグループ全員の端末で
+        //    警報音が鳴ってしまう（F-11 の要点は「その子だけ」を鳴らすこと）
+        realtimePublisher.toUser(targetUserId, "ping", response);
+
+        return response;
     }
 
     /** SC-M04 1件を読む。送った人と呼ばれた人だけ */
@@ -79,7 +87,12 @@ public class PingService {
                     userRepository.findById(userId).orElseThrow(PingNotAccessibleException::new));
         }
 
-        return toResponse(ping);
+        PingResponse response = toResponse(ping);
+
+        // 応答は呼び出した側へ返す。相手の画面が待ち状態から変わる
+        realtimePublisher.toUser(ping.getFromUser().getId(), "ping", response);
+
+        return response;
     }
 
     /**
@@ -97,6 +110,8 @@ public class PingService {
 
         for (Ping ping : stale) {
             ping.setStatus(PingStatus.NO_RESPONSE);
+            // 3分待った親の画面を、開いたままでも「応答なし」に変える
+            realtimePublisher.toUser(ping.getFromUser().getId(), "ping", toResponse(ping));
         }
 
         return stale.size();

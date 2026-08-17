@@ -5,6 +5,7 @@ import com.mimamori.api.chat.dto.MessageResponse;
 import com.mimamori.api.group.Group;
 import com.mimamori.api.group.GroupMemberRepository;
 import com.mimamori.api.group.GroupRepository;
+import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.user.User;
 import com.mimamori.api.user.UserRepository;
 import java.time.Instant;
@@ -28,6 +29,7 @@ public class ChatService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final RealtimePublisher realtimePublisher;
 
     /**
      * SC-C01 一覧。グループトークを先頭に、下に個人トークを並べる。
@@ -128,7 +130,13 @@ public class ChatService {
         // requireAccess は上で通しているので、更新だけを呼ぶ
         touchReadPoint(conversationId, userId);
 
-        return toMessageResponse(message);
+        MessageResponse response = toMessageResponse(message);
+
+        // ⚠️ 保存の「あと」に配る。先に配ると、受け取った側が履歴を取り直したとき
+        //    まだ入っていないことがある
+        realtimePublisher.toConversation(conversationId, response);
+
+        return response;
     }
 
     /**

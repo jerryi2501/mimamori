@@ -56,6 +56,18 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             @Param("groupId") Long groupId, @Param("exceptUserId") Long exceptUserId);
 
     /**
+     * その人が「位置を共有している」グループの id（リアルタイム配信の宛先）。
+     *
+     * <p>⚠️ 共有オフのグループを外すのがこの問い合わせの要点。全グループに 配ってしまうと、画面で隠していても通信を覗けば座標が読めてしまう。
+     */
+    @Query(
+            """
+            select gm.group.id from GroupMember gm
+            where gm.user.id = :userId and gm.shareLocation = true
+            """)
+    List<Long> findSharingGroupIds(@Param("userId") Long userId);
+
+    /**
      * その人と1つでも同じグループに居る人の userId（本人は含まない）。
      *
      * <p>電池切れのように「グループに属さない出来事」を知らせる宛先に使う。

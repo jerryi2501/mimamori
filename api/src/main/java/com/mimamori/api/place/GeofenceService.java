@@ -81,6 +81,29 @@ public class GeofenceService {
         return event;
     }
 
+    /**
+     * その座標を含むセーフゾーンの名前。どれにも入っていなければ null。
+     *
+     * <p>⚠️ 円が重なっているときは中心が近いほうを選ぶ。登録順で決めると、 同じ場所なのに日によって「自宅」「学校」と表示が揺れる。
+     *
+     * <p>地図・履歴・リアルタイム配信の3か所が同じ判定を使う。以前は それぞれに同じコードが写されていた。
+     */
+    public static String nameOfContaining(List<Place> places, double lat, double lng) {
+        Place best = null;
+        double bestDistance = Double.MAX_VALUE;
+
+        for (Place place : places) {
+            double distance = GeoUtils.distanceMeters(place.getLat(), place.getLng(), lat, lng);
+
+            if (distance <= place.getRadiusM() && distance < bestDistance) {
+                best = place;
+                bestDistance = distance;
+            }
+        }
+
+        return best == null ? null : best.getName();
+    }
+
     /** 直近の記録が ARRIVE なら中に居る扱い。記録が無ければ外 */
     private boolean wasInside(Long placeId, Long userId) {
         return placeEventRepository

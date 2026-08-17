@@ -56,6 +56,14 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers("/actuator/health")
                                         .permitAll()
+                                        // ⚠️ WebSocket のハンドシェイクだけ通す。
+                                        //    ブラウザの WebSocket API は独自ヘッダーを
+                                        //    付けられないので、ここで Bearer を要求すると
+                                        //    そもそも繋げない。本人確認は接続後の
+                                        //    STOMP CONNECT フレームで
+                                        //    StompAuthInterceptor が行う
+                                        .requestMatchers("/ws/**")
+                                        .permitAll()
                                         // ⚠️ /error を必ず通す。
                                         //    例外が起きると Spring MVC は /error へ
                                         //    フォワードするが、そこも認可の対象になる。

@@ -12,6 +12,10 @@ import {
   Car,
   MapPin,
   Clock,
+  MoreVertical,
+  BatteryMedium,
+  Share2,
+  CalendarDays,
 } from "lucide-react";
 import {
   TILE_LIGHT,
@@ -20,8 +24,20 @@ import {
   TILE_SUBDOMAINS,
   MAX_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchMember, sendPing, fetchLatestPing, removeGroupMember } from "@/api";
-import { formatLastUpdated, movementLabel, formatTime } from "@/lib/format";
+import {
+  fetchMember,
+  sendPing,
+  fetchLatestPing,
+  removeGroupMember,
+  fetchGroup,
+} from "@/api";
+import {
+  formatLastUpdated,
+  movementLabel,
+  formatTime,
+  batteryColor,
+  formatDayLabel,
+} from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
@@ -69,6 +85,12 @@ export default function MemberDetailPage() {
   //   端末から取った現在地（useMyLocation が入れる）を見る
   const myPosition = useAppStore((state) => state.myPosition);
 
+  // ⚠️ 「グループから削除」は OWNER だけができる（GroupService.remove）。
+  //   役割を見ずにボタンを出すと、押せば必ず 403 になる場所を見せることになる。
+  const user = useAppStore((state) => state.user);
+
+  const [myRole, setMyRole] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(true);
@@ -92,16 +114,21 @@ export default function MemberDetailPage() {
     let alive = true; // 取得中に別の人へ遷移したとき、古い結果を捨てるための印
 
     setLoading(true);
-    // 2つの取得は互いに独立なので、並行して待つ
-    Promise.all([fetchMember(currentGroupId, id), fetchLatestPing(id)]).then(
-      ([foundMember, foundPing]) => {
-        if (!alive) return;
-        setMember(foundMember);
-        setPing(foundPing);
-        setSharing(foundMember?.shareLocation ?? false);
-        setLoading(false);
-      }
-    );
+    // 3つの取得は互いに独立なので、並行して待つ。
+    // ⚠️ fetchGroup が返す role は「このAPIを呼んだ人の役割」であって
+    //   グループの属性ではない（GroupResponse の注記）。
+    Promise.all([
+      fetchMember(currentGroupId, id),
+      fetchLatestPing(id),
+      fetchGroup(currentGroupId),
+    ]).then(([foundMember, foundPing, group]) => {
+      if (!alive) return;
+      setMember(foundMember);
+      setPing(foundPing);
+      setSharing(foundMember?.shareLocation ?? false);
+      setMyRole(group?.role ?? null);
+      setLoading(false);
+    });
 
     return () => {
       alive = false;
@@ -148,6 +175,10 @@ export default function MemberDetailPage() {
   const moveLabel = movementLabel(member.movement);
   const MoveIcon = MOVEMENT_ICON[member.movement];
 
+  // ⚠️ 自分自身も外せない。OWNER が抜けるのは「グループを削除」であって
+  //   メンバーの削除ではない（GroupService の分岐と合わせる）。
+  const canRemove = myRole === "OWNER" && member.id !== user?.id;
+
   return (
     <div className="bg-canvas flex h-svh flex-col">
       {/* ===== 上: 地図 ===== */}
@@ -188,6 +219,48 @@ export default function MemberDetailPage() {
         >
           <ArrowLeft size={20} strokeWidth={2} />
         </button>
+
+        {/* 取り消せない操作は「⋯」の中に隠す。よく開く画面の一番下に
+            赤い大ボタンを置くと、誤爆の危険が高いわりに使う頻度は低い。
+            ⚠️ OWNER 以外には出さない。押せば必ず 403 になる場所を
+            見せないこと（GroupDetailPage と同じ方針）。 */}
+        {canRemove && (
+          <>
+            <button
+              type="button"
+              aria-label="その他の操作"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="bg-fab border-fab-line text-ink shadow-float absolute top-4 right-4 z-[1000] flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md"
+            >
+              <MoreVertical size={20} strokeWidth={2} />
+            </button>
+
+            {menuOpen && (
+              <>
+                {/* 外側を押したら閉じる受け皿。メニューより下に敷く */}
+                <button
+                  type="button"
+                  aria-label="メニューを閉じる"
+                  onClick={() => setMenuOpen(false)}
+                  className="absolute inset-0 z-[1000] cursor-default"
+                />
+                <div className="bg-surface shadow-float absolute top-16 right-4 z-[1001] overflow-hidden rounded-xl">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setConfirmRemove(true);
+                    }}
+                    className="text-alert w-full px-5 py-3 text-left text-sm font-semibold whitespace-nowrap disabled:opacity-40"
+                  >
+                    グループから削除
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {/* ===== 下: シート ===== */}
@@ -264,36 +337,41 @@ export default function MemberDetailPage() {
 
           <hr className="border-line mb-5" />
 
-          {/* --- 相手の共有状態（読み取り専用）---
-              ⚠️ ここは操作できない。DB の share_location は「自分が
-              そのグループで共有するか」であって、「相手ごと」の設定は
-              存在しない（企画書 F-03）。以前はスイッチだったが、
-              押しても何も起きないため表示だけにした。
-              自分の共有を切り替えるのは設定画面（SC-T01）。 */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-ink text-[15px] font-semibold">
-                この人の位置共有
-              </span>
-              <span
-                className={`text-sm font-semibold ${sharing ? "text-safe" : "text-idle"}`}
-              >
+          {/* --- 端末とグループの状態 ---
+              ⚠️ 共有はここでは切り替えられない。DB の share_location は「自分が
+              そのグループで共有するか」であって、「相手ごと」の設定は存在しない
+              （企画書 F-03）。自分の共有を切り替えるのは設定画面（SC-T01）。 */}
+          <dl className="bg-subtle mb-4 rounded-xl px-4 py-1">
+            <InfoRow Icon={BatteryMedium} label="電池残量">
+              {/* ⚠️ level != null で判定する。{level && …} だと 0% が
+                  そのまま画面に出る（設計ルール） */}
+              {member.batteryLevel != null ? (
+                <span style={{ color: batteryColor(member.batteryLevel) }}>
+                  {member.batteryLevel}%
+                </span>
+              ) : (
+                <span className="text-ink-muted">不明</span>
+              )}
+            </InfoRow>
+
+            <InfoRow Icon={Share2} label="位置共有">
+              <span className={sharing ? "text-safe" : "text-idle"}>
                 {sharing ? "オン" : "オフ"}
               </span>
-            </div>
-            <p className="text-ink-sub mt-1 text-xs">
-              相手がオフにしている間は、位置も電池残量も届きません
-            </p>
-          </div>
+            </InfoRow>
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setConfirmRemove(true)}
-            className="border-line text-alert w-full rounded-xl border py-3.5 text-[15px] font-semibold disabled:opacity-40"
-          >
-            グループから削除
-          </button>
+            <InfoRow Icon={CalendarDays} label="参加日" last>
+              {member.joinedAt ? (
+                formatDayLabel(new Date(member.joinedAt))
+              ) : (
+                <span className="text-ink-muted">不明</span>
+              )}
+            </InfoRow>
+          </dl>
+
+          <p className="text-ink-sub mb-2 text-xs">
+            相手が共有をオフにしている間は、位置も電池残量も届きません
+          </p>
         </div>
       </section>
 
@@ -342,6 +420,28 @@ function ActionButton({ label, Icon, onClick }) {
       </span>
       <span className="text-ink text-xs font-semibold">{label}</span>
     </button>
+  );
+}
+
+/**
+ * 端末情報カードの1行。
+ *
+ * ⚠️ アイコンは配列やpropで渡すとき大文字始まりにすること。JSX は小文字を
+ *   HTMLタグとして扱うため、icon だと <icon> になって何も描かれない。
+ */
+function InfoRow({ Icon, label, last, children }) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 py-3 ${
+        last ? "" : "border-line border-b"
+      }`}
+    >
+      <dt className="text-ink-sub flex items-center gap-2 text-[13px]">
+        <Icon size={15} strokeWidth={2} />
+        {label}
+      </dt>
+      <dd className="text-ink text-sm font-semibold">{children}</dd>
+    </div>
   );
 }
 

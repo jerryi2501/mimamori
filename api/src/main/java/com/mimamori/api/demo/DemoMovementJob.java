@@ -9,6 +9,7 @@ import com.mimamori.api.sos.SosAlertRepository;
 import com.mimamori.api.user.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +69,14 @@ public class DemoMovementJob {
                     new Waypoint(34.677560, 135.475197, "大阪府大阪市西区本田三丁目"),
                     new Waypoint(34.677986, 135.475403, "大阪府大阪市西区本田三丁目"));
 
+    /**
+     * 経路の端で何回ぶん立ち止まるか。
+     *
+     * <p>⚠️ HistorySegmenter の MIN_STAY は5分。15秒間隔なら20回で5分ちょうどなので、 少し余裕を持たせて滞在と判定させる。短くすると履歴が空になり、
+     * 長くすると見学者が「動いていない」と受け取る。
+     */
+    private static final int DWELL_TICKS = 24;
+
     /** 電池はここから1歩ごとに1%ずつ減り、下限に着いたら満充電に戻す */
     private static final int BATTERY_FULL = 90;
 
@@ -114,15 +123,29 @@ public class DemoMovementJob {
     }
 
     /**
-     * 何歩目かを経路上の位置に直す。端に着いたら折り返す。
+     * 一周ぶんの「何歩目にどこに居るか」。自宅で待つ → 学校へ → 学校で待つ → 自宅へ。
      *
-     * <p>⚠️ 単純な剰余だと、学校に着いた次の瞬間に自宅へ瞬間移動する。 見た目が壊れるだけでなく、移動速度が異常な値になる。
+     * <p>⚠️ 単純な往復にすると、学校に着いた次の瞬間に自宅へ瞬間移動する。 見た目が壊れるだけでなく、移動速度が異常な値になる。
+     *
+     * <p>⚠️ 両端で立ち止まるのが要。HistorySegmenter は「150m以内に5分以上」を 滞在と呼び、滞在が1つも無い日は移動履歴（SC-M03）を空で返す。歩き
+     * 続けるだけのデモにしていたとき、履歴画面は永久に「この日の記録は ありません」だった。
      */
-    private static int indexOf(int step) {
-        int lap = ROUTE.size() * 2 - 2; // 往path + 復path（両端は重ねない）
-        int position = step % lap;
+    private static final List<Integer> CYCLE = buildCycle();
 
-        return position < ROUTE.size() ? position : lap - position;
+    private static List<Integer> buildCycle() {
+        List<Integer> cycle = new ArrayList<>();
+        int last = ROUTE.size() - 1;
+
+        for (int i = 0; i < DWELL_TICKS; i++) cycle.add(0); // 自宅で過ごす
+        for (int i = 1; i <= last; i++) cycle.add(i); // 学校へ向かう
+        for (int i = 0; i < DWELL_TICKS; i++) cycle.add(last); // 学校で過ごす
+        for (int i = last - 1; i >= 1; i--) cycle.add(i); // 自宅へ戻る
+
+        return List.copyOf(cycle);
+    }
+
+    private static int indexOf(int step) {
+        return CYCLE.get(step % CYCLE.size());
     }
 
     /** 1歩ごとに1%減らし、空になったら満充電に戻す（F-08 の通知を見せる） */

@@ -4,8 +4,28 @@
 
 就職活動用のポートフォリオ作品です。技術的な見どころは **WebSocket（STOMP）によるリアルタイム更新** で、誰かが動くと、家族全員の地図がその場で書き換わります。
 
-<!-- スクリーンショットをここに置く。docs/screenshots/ に画像を入れてから
-     ![マップ](docs/screenshots/map.png) のように貼る -->
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/02-map.png" width="100%"><br>
+      <sub>マップ（SC-M01）</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/03-member-detail.png" width="100%"><br>
+      <sub>メンバー詳細（SC-M02）</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/04-history.png" width="100%"><br>
+      <sub>位置履歴（SC-M03）</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/07-sos.png" width="100%"><br>
+      <sub>緊急通報（SC-S01）</sub>
+    </td>
+  </tr>
+</table>
+
+<sub>他の画面は <a href="docs/screenshots/">docs/screenshots/</a> にあります。</sub>
 
 ---
 

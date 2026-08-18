@@ -116,9 +116,14 @@ public class HistorySegmenter {
         return span.compareTo(MIN_STAY) >= 0;
     }
 
-    /** そのかたまりで一番新しい住所。取れていなければ null（でっち上げない） */
+    /**
+     * その滞在を代表する住所。取れていなければ null（でっち上げない）。
+     *
+     * <p>⚠️ 古い順に探す。かたまりには「そこから離れ始めた点」も 150m 以内なら 混ざっており、新しい順に取ると隣町の住所が滞在地の住所として出る。
+     * 実際、自宅（境川一丁目）の滞在に九条南二丁目と表示されていた。
+     */
     private String addressOf(List<Location> cluster) {
-        return cluster.reversed().stream()
+        return cluster.stream()
                 .map(Location::getAddress)
                 .filter(Objects::nonNull)
                 .findFirst()

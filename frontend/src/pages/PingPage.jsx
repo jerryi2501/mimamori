@@ -53,7 +53,7 @@ export default function PingPage() {
 
   return (
     <div className="bg-warn flex h-svh flex-col items-center px-6 py-8 text-white">
-      <p className="text-sm font-semibold opacity-80">みまもり</p>
+      <p className="text-sm font-semibold opacity-80">ShareMe</p>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
         {/* 送り主のアバター */}

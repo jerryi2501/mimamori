@@ -169,7 +169,7 @@ export default function SettingsPage() {
         >
           ログアウト
         </button>
-        <p className="text-ink-muted mt-4 text-center text-xs">みまもり v0.1.0</p>
+        <p className="text-ink-muted mt-4 text-center text-xs">ShareMe v0.1.0</p>
       </div>
 
       <ConfirmDialog

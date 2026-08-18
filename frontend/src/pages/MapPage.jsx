@@ -107,7 +107,7 @@ export default function MapPage() {
           <Settings size={22} strokeWidth={2} />
         </button>
 
-        <h1 className="text-ink text-lg font-bold">みまもり</h1>
+        <h1 className="text-ink text-lg font-bold">ShareMe</h1>
 
         <div className="flex items-center gap-3">
           <button

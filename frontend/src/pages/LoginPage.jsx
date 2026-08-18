@@ -62,7 +62,7 @@ export default function LoginPage() {
         <span className="bg-brand mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white">
           <MapPin size={30} strokeWidth={2.5} />
         </span>
-        <h1 className="text-ink text-2xl font-bold">みまもり</h1>
+        <h1 className="text-ink text-2xl font-bold">ShareMe</h1>
         <p className="text-ink-sub mt-1 text-[13px]">
           家族の「今どこ？」を、そっと見守る
         </p>

@@ -56,8 +56,8 @@ INSERT INTO places (group_id, name, category, lat, lng, radius_m, address, creat
 SELECT g.id, p.name, p.category, p.lat, p.lng, p.radius_m, p.address, u.id
 FROM (VALUES
         -- ⚠️ category は大文字。V2 で CHECK 制約を大文字に変えてある
-        ('自宅', 'HOME',   34.1785, 131.4737, 150, '山口県山口市亀山町'),
-        ('学校', 'SCHOOL', 34.1720, 131.4790, 200, '山口県山口市駅通り一丁目')
+        ('自宅', 'HOME',   34.669895, 135.471481, 150, '大阪府大阪市西区境川一丁目'),
+        ('学校', 'SCHOOL', 34.677986, 135.475403, 200, '大阪府大阪市西区本田三丁目')
      ) AS p (name, category, lat, lng, radius_m, address)
 JOIN groups g ON g.invite_code = 'MYC-D8A'
 JOIN users  u ON u.email = 'watashi@example.com'
@@ -74,10 +74,10 @@ WHERE NOT EXISTS (
 INSERT INTO locations (user_id, lat, lng, accuracy, battery_level, address)
 SELECT u.id, l.lat, l.lng, l.accuracy, l.battery_level, l.address
 FROM (VALUES
-        ('mama@example.com',   34.1785, 131.4737, 12.0::real, 82::smallint, '山口県山口市亀山町'),
-        ('sakura@example.com', 34.1720, 131.4790, 18.0::real, 45::smallint, '山口県山口市駅通り一丁目'),
+        ('mama@example.com',   34.669895, 135.471481, 12.0::real, 82::smallint, '大阪府大阪市西区境川一丁目'),
+        ('sakura@example.com', 34.677986, 135.475403, 18.0::real, 45::smallint, '大阪府大阪市西区本田三丁目'),
         -- けんたは電池が少ない。バッテリー警告の色（20%未満は赤）を見せる
-        ('kenta@example.com',  34.1770, 131.4750, 25.0::real, 14::smallint, '山口県山口市中央一丁目')
+        ('kenta@example.com',  34.673491, 135.473224, 25.0::real, 14::smallint, '大阪府大阪市西区九条南二丁目')
      ) AS l (email, lat, lng, accuracy, battery_level, address)
 JOIN users u ON u.email = l.email
 WHERE NOT EXISTS (

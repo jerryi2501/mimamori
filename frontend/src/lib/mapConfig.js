@@ -28,8 +28,13 @@ export const TILE_SUBDOMAINS = "abcd";
 /** CARTO が配信している最大ズーム */
 export const MAX_ZOOM = 20;
 
-/** 初期表示の中心（山口市）。※本番では自分の現在地に置き換える */
-export const DEFAULT_CENTER = [34.1785, 131.4737];
+/**
+ * 初期表示の中心（大阪市西区境川）。デモ家族の自宅に合わせてある。
+ *
+ * ⚠️ 自分の現在地が取れたらそちらへ寄せる。ここは位置情報を拒否された
+ *   場合と、取得できるまでの間だけ使う。
+ */
+export const DEFAULT_CENTER = [34.669895, 135.471481];
 
 /** 初期ズーム */
 export const DEFAULT_ZOOM = 15;

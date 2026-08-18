@@ -37,11 +37,24 @@ export async function fetchMembers(groupId) {
 /**
  * 自分の情報。
  *
- * ⚠️ /api/me は座標を返さない。自分の現在地は navigator.geolocation を
- *   入れる回で対応する。それまで距離の表示は「不明」になる。
+ * ⚠️ /api/me は座標を返さない。自分の現在地は端末の navigator.geolocation
+ *   から取り、store の myPosition に入る（useMyLocation）。距離を出す画面は
+ *   ここではなく store を見ること。
  */
 export async function fetchMe() {
   return toMember(await client.get("/api/me"));
+}
+
+/**
+ * 自分の現在地をサーバーに送る（F-01）。useMyLocation から呼ぶ。
+ *
+ * ⚠️ 誰の位置かはトークンから決まるので userId は送らない。送れてしまうと
+ *   他人になりすまして偽の位置を書き込める。
+ * ⚠️ address は 100m 以上動いたときだけ入れる。省けばサーバーが前回の住所を
+ *   引き継ぐので、逆ジオコーディングの呼び出しを減らせる。
+ */
+export async function sendLocation({ lat, lng, accuracy, batteryLevel, address }) {
+  return client.post("/api/locations", { lat, lng, accuracy, batteryLevel, address });
 }
 
 /**

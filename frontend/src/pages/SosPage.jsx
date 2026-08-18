@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, MapPin } from "lucide-react";
-import { fetchMembers, fetchMe, sendSos, resolveSos } from "@/api";
+import { fetchMembers, sendSos, resolveSos } from "@/api";
 import { useAppStore } from "@/store";
 import useCountdown from "@/hooks/useCountdown";
 import useLongPress from "@/hooks/useLongPress";
@@ -24,15 +24,13 @@ export default function SosPage() {
 
   const currentGroupId = useAppStore((state) => state.currentGroupId);
 
-  const [me, setMe] = useState(null);
+  // 端末から取った現在地（useMyLocation が入れる）。まだ取れていなければ null
+  const myPosition = useAppStore((state) => state.myPosition);
+
   const [members, setMembers] = useState([]);
   const [alert, setAlert] = useState(null); // 発信済みなら中身が入る
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchMe().then(setMe);
-  }, []);
 
   useEffect(() => {
     fetchMembers(currentGroupId).then(setMembers);
@@ -43,16 +41,22 @@ export default function SosPage() {
     setBusy(true);
     setError(null);
 
-    // ⚠️ 座標は付けずに送ってよい。/api/me は位置を返さないので、
-    //   サーバーが直近の位置で代用する。一度も送っていなければ断られる
+    // ⚠️ 座標が無いまま送ってよい。位置を取れない場面こそ SOS の本番なので、
+    //   その場合はサーバーが直近の位置で代用する（一度も無ければ断られる）
     try {
-      setAlert(await sendSos({ groupId: currentGroupId, lat: me?.lat, lng: me?.lng }));
+      setAlert(
+        await sendSos({
+          groupId: currentGroupId,
+          lat: myPosition?.lat,
+          lng: myPosition?.lng,
+        })
+      );
     } catch (caught) {
       setError(caught.message);
     } finally {
       setBusy(false);
     }
-  }, [me, currentGroupId]);
+  }, [myPosition, currentGroupId]);
 
   const handleUndo = useCallback(async () => {
     if (!alert) return;
@@ -83,6 +87,12 @@ export default function SosPage() {
   }, [running, secondsLeft]);
 
   const isActive = alert !== null;
+
+  // ⚠️「住所が出ない」と「現在地が無い」を混ぜない。座標は取れているのに
+  //   逆ジオコーディングだけ失敗した場合、位置は家族に届いている
+  const locationLabel =
+    myPosition?.address ??
+    (myPosition ? "住所を取得できません" : "位置情報を取得できません");
 
   return (
     <div className="bg-surface flex h-svh flex-col">
@@ -180,7 +190,7 @@ export default function SosPage() {
         <div className="mb-6 text-center">
           <p className="text-ink flex items-center justify-center gap-1.5 text-[13px]">
             <MapPin size={14} strokeWidth={2} className="text-ink-sub" />
-            {me?.address ?? "位置情報を取得できません"}
+            {locationLabel}
           </p>
           {isActive && (
             <button

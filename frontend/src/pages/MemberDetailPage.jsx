@@ -20,13 +20,7 @@ import {
   TILE_SUBDOMAINS,
   MAX_ZOOM,
 } from "@/lib/mapConfig";
-import {
-  fetchMember,
-  fetchMe,
-  sendPing,
-  fetchLatestPing,
-  removeGroupMember,
-} from "@/api";
+import { fetchMember, sendPing, fetchLatestPing, removeGroupMember } from "@/api";
 import { formatLastUpdated, movementLabel, formatTime } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { createMemberIcon } from "@/components/map/memberIcon";
@@ -71,8 +65,11 @@ export default function MemberDetailPage() {
   const isNight = useAppStore((state) => state.isNight);
   const currentGroupId = useAppStore((state) => state.currentGroupId);
 
+  // ⚠️ 距離は「自分が今どこに居るか」が要る。/api/me は座標を返さないので、
+  //   端末から取った現在地（useMyLocation が入れる）を見る
+  const myPosition = useAppStore((state) => state.myPosition);
+
   const [member, setMember] = useState(null);
-  const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(true);
   const [ping, setPing] = useState(null); // 送信した呼び出し
@@ -95,12 +92,11 @@ export default function MemberDetailPage() {
     let alive = true; // 取得中に別の人へ遷移したとき、古い結果を捨てるための印
 
     setLoading(true);
-    // 3つの取得は互いに独立なので、並行して待つ
-    Promise.all([fetchMember(currentGroupId, id), fetchMe(), fetchLatestPing(id)]).then(
-      ([foundMember, foundMe, foundPing]) => {
+    // 2つの取得は互いに独立なので、並行して待つ
+    Promise.all([fetchMember(currentGroupId, id), fetchLatestPing(id)]).then(
+      ([foundMember, foundPing]) => {
         if (!alive) return;
         setMember(foundMember);
-        setMe(foundMe);
         setPing(foundPing);
         setSharing(foundMember?.shareLocation ?? false);
         setLoading(false);
@@ -145,9 +141,9 @@ export default function MemberDetailPage() {
   const position = hasPosition ? [member.lat, member.lng] : null;
 
   // ⚠️ 自分の座標がまだ無いと NaN になり、画面に「NaNkm」と出る。
-  //   両方そろっているときだけ計算する（/api/me は座標を返さない）
-  const canMeasure = hasPosition && me?.lat != null && me?.lng != null;
-  const distance = canMeasure ? distanceMeters(me, member) : null;
+  //   位置情報を拒否された端末では最後まで来ないので、必ず確認する
+  const canMeasure = hasPosition && myPosition != null;
+  const distance = canMeasure ? distanceMeters(myPosition, member) : null;
 
   const moveLabel = movementLabel(member.movement);
   const MoveIcon = MOVEMENT_ICON[member.movement];

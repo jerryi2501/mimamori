@@ -31,6 +31,9 @@ export default function SosAlertPage() {
 
   const [alert, setAlert] = useState(null);
   const [members, setMembers] = useState([]);
+  // 距離の計算に使う自分の現在地。me（/api/me）は座標を返さない
+  const myPosition = useAppStore((state) => state.myPosition);
+
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -122,12 +125,12 @@ export default function SosAlertPage() {
     (member) => member.id !== me?.id && alert.responderIds.includes(member.id)
   );
 
-  // ⚠️ /api/me は座標を返さないので、たいてい「不明」になる。
-  //   NaN を formatDistance に渡すと画面に「NaNkm」と出るため必ず確認する
-  const distance =
-    me?.lat != null && me?.lng != null
-      ? distanceMeters(me, { lat: alert.lat, lng: alert.lng })
-      : null;
+  // ⚠️ 自分の現在地は端末から取る（useMyLocation）。位置情報を拒否された
+  //   端末では最後まで null のまま。NaN を formatDistance に渡すと画面に
+  //   「NaNkm」と出るので必ず確認する
+  const distance = myPosition
+    ? distanceMeters(myPosition, { lat: alert.lat, lng: alert.lng })
+    : null;
 
   /** 地図ピン用。MOCK_ME には電池や共有状態が無いので補う */
   const senderPin = sender && {

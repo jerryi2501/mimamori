@@ -51,7 +51,15 @@ export const useAppStore = create((set) => ({
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(GROUP_KEY);
-    set({ token: null, user: null, currentGroupId: null });
+    // ⚠️ 現在地も消す。次に別の人がログインしたとき、前の人の座標が
+    //   残ったままだと距離や SOS がその値で計算される
+    set({
+      token: null,
+      user: null,
+      currentGroupId: null,
+      myPosition: null,
+      locationError: null,
+    });
   },
 
   // ---- テーマ（企画書 §1.5 / デザインガイドライン §1.5）----
@@ -85,6 +93,26 @@ export const useAppStore = create((set) => ({
     }
     set({ currentGroupId });
   },
+
+  // ---- 自分の現在地（F-01）----
+  /**
+   * 端末から取れた自分の最新位置。useMyLocation が更新する。
+   *
+   * ⚠️ /api/me は座標を返さない。距離の計算（SC-M02）と SOS の発信（SC-S01）は
+   *   ここを見る。まだ一度も取れていなければ null。
+   * ⚠️ localStorage に保存しない。古い座標を「現在地」として復元すると、
+   *   前に居た場所を今居る場所として送ってしまう。
+   */
+  myPosition: null,
+  setMyPosition: (myPosition) => set({ myPosition }),
+
+  /**
+   * 位置情報が使えない理由（許可されなかった等）。使えていれば null。
+   *
+   * ⚠️ そのまま画面に出す文言を入れる。技術的な原因はここに書かない。
+   */
+  locationError: null,
+  setLocationError: (locationError) => set({ locationError }),
 
   // ---- 通知の未読件数（SC-N01）----
   /**

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import useMyLocation from "@/hooks/useMyLocation";
 import { useAppStore } from "@/store";
 import { connectRealtime, disconnectRealtime, subscribe } from "@/lib/realtime";
 
@@ -9,14 +10,19 @@ import { connectRealtime, disconnectRealtime, subscribe } from "@/lib/realtime";
  * <Route element={<RequireAuth />}> の中に入れた画面すべてに効く。
  * 1画面ずつ包む必要はない。
  *
- * リアルタイム接続の開始・終了もここで面倒を見る。ログイン中の画面すべての
- * 外側にいるので、タブを移動しても接続が切れない。
+ * リアルタイム接続の開始・終了と、自分の現在地の送信もここで面倒を見る。
+ * ログイン中の画面すべての外側にいるので、タブを移動しても接続が切れない。
  */
 export default function RequireAuth() {
   const user = useAppStore((state) => state.user);
   const token = useAppStore((state) => state.token);
+  const locationError = useAppStore((state) => state.locationError);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // ⭐ 現在地の送信（F-01）。ここで1回だけ呼ぶ。画面ごとに呼ぶと、
+  //   タブを移動するたびに監視が張り直されて送信間隔が崩れる
+  useMyLocation();
 
   useEffect(() => {
     if (!token) return;
@@ -47,5 +53,20 @@ export default function RequireAuth() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  return <Outlet />; // 通過したら中の画面を描く
+  // 通過したら中の画面を描く。
+  // ⚠️ 位置情報が使えないことは黙って隠さない。位置共有アプリで現在地が
+  //   送れていないなら、それは全画面に関わる状態。
+  return (
+    <>
+      {locationError && (
+        <div
+          role="alert"
+          className="bg-alert fixed inset-x-0 top-0 z-[1100] px-4 py-2 text-center text-xs font-semibold text-white"
+        >
+          {locationError}
+        </div>
+      )}
+      <Outlet />
+    </>
+  );
 }

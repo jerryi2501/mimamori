@@ -1,6 +1,7 @@
 package com.mimamori.api.notification;
 
 import com.mimamori.api.notification.dto.NotificationResponse;
+import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.user.User;
 import com.mimamori.api.user.UserRepository;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final RealtimePublisher realtimePublisher;
 
     /** SC-N01 一覧（新しい順） */
     @Transactional(readOnly = true)
@@ -108,15 +110,27 @@ public class NotificationService {
             return;
         }
 
-        notificationRepository.saveAll(
-                userIds.stream()
-                        .map(
-                                userId ->
-                                        new Notification(
-                                                userRepository.getReferenceById(userId),
-                                                type,
-                                                new HashMap<>(payload)))
-                        .toList());
+        List<Notification> saved =
+                notificationRepository.saveAll(
+                        userIds.stream()
+                                .map(
+                                        userId ->
+                                                new Notification(
+                                                        userRepository.getReferenceById(userId),
+                                                        type,
+                                                        new HashMap<>(payload)))
+                                .toList());
+
+        // ⚠️ 保存の「あと」に配る。先に送ると、受け取った画面が一覧を取りに来た
+        //    ときにまだ表に無く、ベルの数字と中身が食い違う。
+        // ⚠️ 宛先は本人だけ（/user/queue/…）。通知は個人あてなので、
+        //    グループ全体に流すと他人あての通知まで見えてしまう。
+        saved.forEach(
+                notification ->
+                        realtimePublisher.toUser(
+                                notification.getUser().getId(),
+                                "notification",
+                                toResponse(notification)));
     }
 
     private static NotificationResponse toResponse(Notification notification) {

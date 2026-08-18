@@ -5,6 +5,7 @@ import com.mimamori.api.location.LocationRepository;
 import com.mimamori.api.location.LocationService;
 import com.mimamori.api.location.dto.LocationRequest;
 import com.mimamori.api.notification.NotificationRepository;
+import com.mimamori.api.sos.SosAlertRepository;
 import com.mimamori.api.user.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,6 +81,7 @@ public class DemoMovementJob {
     private final LocationRepository locationRepository;
     private final NotificationRepository notificationRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final SosAlertRepository sosAlertRepository;
 
     /** 何歩目か。往復と電池残量の両方をこの1つの値から決める */
     private int step = 0;
@@ -155,6 +157,12 @@ public class DemoMovementJob {
                                 notificationRepository.deleteByUserIdInAndCreatedAtBefore(
                                         family, before);
                             }
+
+                            // ⚠️ 見学者が SOS を試したあとタブを閉じると、通報は
+                            //   ACTIVE のまま残る。解除できるのは発信者だけなので、
+                            //   次に開いた人が「進行中の緊急事態」から始まることになる。
+                            //   デモに限り、古い通報は捨てる。
+                            sosAlertRepository.deleteByTriggeredAtBefore(before);
                         });
     }
 

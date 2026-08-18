@@ -122,4 +122,12 @@ export const useAppStore = create((set) => ({
   unreadCount: 0,
   setUnreadCount: (unreadCount) => set({ unreadCount }),
   clearUnreadCount: () => set({ unreadCount: 0 }),
+
+  /**
+   * 通知が1件届いたとき（リアルタイム）。
+   *
+   * ⚠️ 今の値を引数で受け取らず、set の関数形で足す。購読側が unreadCount を
+   *   読むと、その値が変わるたびに購読を張り直すことになる。
+   */
+  incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
 }));

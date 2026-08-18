@@ -1,5 +1,5 @@
-import { Car } from "lucide-react";
 import { formatLastUpdated, isStale, batteryColor } from "@/lib/format";
+import MovementIcon from "@/components/common/MovementIcon";
 
 /**
  * 家族メンバーの一覧（ボトムシートの中身）
@@ -54,9 +54,9 @@ function MemberRow({ member, onSelect }) {
               isOff || stale ? "text-ink-muted" : "text-ink-sub"
             }`}
           >
-            {member.moving && !isOff && (
-              <Car size={12} strokeWidth={2} className="shrink-0" />
-            )}
+            {/* ⚠️ moving（真偽値）ではなく movement を見る。moving だけだと
+                「動いている」しか分からず、徒歩でも車の絵が出てしまう */}
+            {!isOff && <MovementIcon movement={member.movement} size={12} />}
             <span className="truncate">{meta}</span>
           </div>
         </div>

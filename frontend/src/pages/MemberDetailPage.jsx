@@ -7,9 +7,6 @@ import {
   History,
   Navigation,
   MessageCircle,
-  Footprints,
-  Bike,
-  Car,
   MapPin,
   Clock,
   MoreVertical,
@@ -43,14 +40,7 @@ import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
 import { subscribe } from "@/lib/realtime";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
-
-/**
- * 移動手段ごとのアイコン。※キーの値は大文字始まりにすること（JSXの決まり）
- *
- * ⚠️ vehicle に車のアイコンを使うが、文言は「乗り物」。電車もバスも含むので、
- *   絵は代表として車を借りているだけ。言い切るのは文言のほうに任せる。
- */
-const MOVEMENT_ICON = { walk: Footprints, bike: Bike, vehicle: Car };
+import MovementIcon from "@/components/common/MovementIcon";
 
 /** 呼び出しの状態ごとの見た目（企画書 §2.3）*/
 const PING_VIEW = {
@@ -195,7 +185,6 @@ export default function MemberDetailPage() {
   const distance = canMeasure ? distanceMeters(myPosition, member) : null;
 
   const moveLabel = movementLabel(member.movement);
-  const MoveIcon = MOVEMENT_ICON[member.movement];
 
   // ⚠️ 自分自身も外せない。OWNER が抜けるのは「グループを削除」であって
   //   メンバーの削除ではない（GroupService の分岐と合わせる）。
@@ -325,7 +314,7 @@ export default function MemberDetailPage() {
                   <>
                     <span>・</span>
                     <span className="flex items-center gap-1">
-                      <MoveIcon size={13} strokeWidth={2} />
+                      <MovementIcon movement={member.movement} />
                       {moveLabel}
                       {member.speedKmh != null && ` ${member.speedKmh}km/h`}
                     </span>

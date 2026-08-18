@@ -49,6 +49,23 @@ export default function useMyLocation() {
       return;
     }
 
+    // ⚠️ 位置情報は HTTPS か localhost でしか使えない（secure context）。
+    //   IP アドレスに http でつなぐ開発中がこれに当たる。
+    //
+    //   このときブラウザは PERMISSION_DENIED を返すので、そのままだと
+    //   「ブラウザの設定から許可してください」と出てしまうが、設定を
+    //   触っても直らない。利用者に落ち度が無いので帯は出さず、
+    //   開発者にだけ分かるようコンソールに残す。
+    //   本番（Vercel）は HTTPS なのでここは通らない。
+    if (!window.isSecureContext) {
+      console.warn(
+        "位置情報は HTTPS か localhost でのみ利用できます。" +
+          "現在の接続元: " +
+          window.location.origin
+      );
+      return;
+    }
+
     // 画面から離れたあとに届いた結果を捨てるための印
     let alive = true;
 

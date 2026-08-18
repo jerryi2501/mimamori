@@ -186,8 +186,8 @@ export async function fetchMessages(conversationId, limit) {
 /**
  * メッセージを送る。保存されたメッセージが返る。
  *
- * TODO [REALTIME] 保存後はサーバーが /topic/conversation/{id} で配信する。
- *   受信側は STOMP の購読で受け取るので、この戻り値は「自分の送信分」だけ。
+ * ⚠️ 戻り値は「自分が送った1件」だけ。相手の画面には、サーバーが
+ *   /topic/conversation/{id} へ配ったものが STOMP の購読で届く。
  */
 export async function sendMessage(conversationId, body) {
   const saved = await client.post(`/api/conversations/${conversationId}/messages`, {
@@ -209,12 +209,15 @@ export async function markConversationRead(conversationId) {
 /**
  * SOS を発信する（F-04 / SC-S01）。
  *
- * ⚠️ 座標は送らなくてよい。/api/me は位置を返さないので、たいてい
- *   undefined になる。その場合サーバーが直近の位置で代用する。
- *   どちらも無ければ「位置情報が取得できないため通報できません」と断られる。
+ * ⚠️ 座標は無いまま送ってよい。位置を取れない場面こそ SOS の本番なので、
+ *   その場合はサーバーが直近の位置で代用する。どちらも無いときだけ
+ *   「位置情報が取得できないため通報できません」と断られる。
  *
- * TODO [REALTIME] サーバーが /topic/group/{id}/sos で全員へ配信する。
- *   発信中は位置送信の間隔を 5秒 に短縮する（企画書 §6）。
+ * 発信するとサーバーが /topic/group/{id}/sos へ配り、家族の画面は
+ * どこに居ても受信画面へ移る（RequireAuth）。
+ *
+ * TODO 発信中は位置送信の間隔を 5秒 に短縮する（企画書 §6）。
+ *   mapConfig の PING_INTERVAL_SOS を用意しただけで、まだ使っていない。
  */
 export async function sendSos({ groupId, lat, lng }) {
   return client.post("/api/sos", { groupId, lat, lng });
@@ -228,8 +231,11 @@ export async function resolveSos(sosId) {
 /**
  * 呼び出しを送る（F-11 / 親側）。
  *
- * TODO [REALTIME] サーバーが /user/queue/ping で相手だけに配信する。
- *   相手がアプリを閉じていれば Web Push にフォールバックする。
+ * サーバーが /user/queue/ping で相手だけに配る。相手はどの画面に居ても
+ * 受信画面へ移り、警報音が鳴る（RequireAuth + useAlarmSound）。
+ *
+ * TODO 相手がアプリを閉じている場合の Web Push。DBの push_subscriptions と
+ *   entity はあるが、購読の受け口も送信もまだ無い。
  */
 export async function sendPing(targetUserId) {
   return client.post("/api/pings", { targetUserId: Number(targetUserId) });
@@ -389,8 +395,8 @@ export async function fetchSosAlert(sosId) {
 /**
  * 「向かっています」と応答する。
  *
- * TODO [REALTIME] 誰が向かっているかも /topic/group/{id}/sos で全員に配る。
- *   ⚠️ これが無いと家族全員が同時に同じ場所へ向かってしまう
+ * 誰が向かっているかも /topic/group/{id}/sos で全員に配られる。
+ * ⚠️ これが無いと家族全員が同時に同じ場所へ向かってしまう（企画書 §2.3）
  */
 export async function respondToSos(sosId) {
   return client.post(`/api/sos/${sosId}/respond`);

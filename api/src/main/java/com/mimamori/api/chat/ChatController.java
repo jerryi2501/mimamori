@@ -66,7 +66,7 @@ public class ChatController {
     /**
      * SC-C02 送信。
      *
-     * <p>TODO [REALTIME] 保存後に /topic/conversation/{id} へ配信する。
+     * <p>保存後に /topic/conversation/{id} へ配信する（ChatService）。
      */
     @PostMapping("/{conversationId}/messages")
     @ResponseStatus(HttpStatus.CREATED)

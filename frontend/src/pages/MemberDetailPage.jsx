@@ -108,6 +108,23 @@ export default function MemberDetailPage() {
     setPing(created);
   };
 
+  /**
+   * 端末の地図アプリで、この人までの経路を開く。
+   *
+   * ※ 地図の描画は CARTO だが、経路案内は外部に任せる（企画書 §2.4 の割り切り）。
+   *   SosAlertPage と同じやり方。
+   *
+   * ⚠️ 新しいタブで開き、noopener を付ける。付けないと開いた先から
+   *   window.opener でこちらのページを操作できてしまう。
+   */
+  const openRoute = () => {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${member.lat},${member.lng}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
   /** グループから外す。⚠️ 取り消せないので必ず確認を挟む */
   const handleRemove = async () => {
     setBusy(true);
@@ -329,7 +346,12 @@ export default function MemberDetailPage() {
               onClick={() => navigate(`/history/${member.id}`)}
             />
 
-            <ActionButton label="経路" Icon={Navigation} />
+            <ActionButton
+              label="経路"
+              Icon={Navigation}
+              disabled={!hasPosition}
+              onClick={openRoute}
+            />
             <ActionButton
               label="メッセージ"
               Icon={MessageCircle}
@@ -412,13 +434,19 @@ function CenterMessage({ text, actionLabel, onAction }) {
   );
 }
 
-/** 4つ並ぶ角丸ボタン */
-function ActionButton({ label, Icon, onClick }) {
+/**
+ * 4つ並ぶ角丸ボタン。
+ *
+ * ⚠️ disabled を受けられるようにしてある。共有オフや位置未送信のときに
+ *   「経路」を押せてしまうと、行き先の無い地図アプリが開く。
+ */
+function ActionButton({ label, Icon, onClick, disabled }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-2"
+      disabled={disabled}
+      className="flex flex-col items-center gap-2 disabled:opacity-40"
     >
       <span className="bg-subtle text-brand flex h-14 w-14 items-center justify-center rounded-2xl">
         <Icon size={22} strokeWidth={2} />

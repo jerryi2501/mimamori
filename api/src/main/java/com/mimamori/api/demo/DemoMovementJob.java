@@ -1,0 +1,150 @@
+package com.mimamori.api.demo;
+
+import com.mimamori.api.group.GroupMemberRepository;
+import com.mimamori.api.location.LocationRepository;
+import com.mimamori.api.location.LocationService;
+import com.mimamori.api.location.dto.LocationRequest;
+import com.mimamori.api.notification.NotificationRepository;
+import com.mimamori.api.user.UserRepository;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * デモ用の家族を動かす（ポートフォリオ用）。
+ *
+ * <p>このアプリの見どころは「位置がひとりでに更新される」ことだが、見学者は 1人・1つのブラウザで開く。誰も動かなければ、地図はただの静止画に見えて
+ * しまう。そこで「ママ」を実際に歩かせ、開いて数十秒で WebSocket の更新が 目に入るようにする。
+ *
+ * <p>⚠️ 既定は無効。本番（Railway）で環境変数 DEMO_MOVEMENT=true のときだけ 動く。開発機で勝手に走ると、自分の動作確認の位置履歴に混ざる。
+ *
+ * <p>⚠️ 位置の書き込みは LocationService.record に任せる。ジオフェンス判定・ 電池の通知・WebSocket 配信がすべてそこに入っているので、デモのためだけに
+ * 同じ処理を書き写さない。
+ */
+@Component
+@ConditionalOnProperty(name = "mimamori.demo.movement.enabled", havingValue = "true")
+@RequiredArgsConstructor
+@Slf4j
+public class DemoMovementJob {
+
+    /** 歩かせる人。V3__demo_data.sql で作られる */
+    private static final String DEMO_EMAIL = "mama@example.com";
+
+    /**
+     * 自宅（亀山町）から学校（駅通り一丁目）までの経路。
+     *
+     * <p>⚠️ 住所は国土地理院の逆ジオコーディングで実際に引いた値。 それらしい住所を手で書くと、地図の場所と住所が食い違う。
+     */
+    private static final List<Waypoint> ROUTE =
+            List.of(
+                    new Waypoint(34.178500, 131.473700, "山口県山口市亀山町"),
+                    new Waypoint(34.177778, 131.474289, "山口県山口市中央二丁目"),
+                    new Waypoint(34.177056, 131.474878, "山口県山口市中央一丁目"),
+                    new Waypoint(34.176333, 131.475467, "山口県山口市中央一丁目"),
+                    new Waypoint(34.175611, 131.476056, "山口県山口市道場門前一丁目"),
+                    new Waypoint(34.174889, 131.476644, "山口県山口市道場門前二丁目"),
+                    new Waypoint(34.174167, 131.477233, "山口県山口市道場門前二丁目"),
+                    new Waypoint(34.173444, 131.477822, "山口県山口市駅通り一丁目"),
+                    new Waypoint(34.172722, 131.478411, "山口県山口市駅通り一丁目"),
+                    new Waypoint(34.172000, 131.479000, "山口県山口市駅通り一丁目"));
+
+    /** 電池はここから1歩ごとに1%ずつ減り、下限に着いたら満充電に戻す */
+    private static final int BATTERY_FULL = 90;
+
+    private static final int BATTERY_EMPTY = 15;
+
+    /** これより古いデモの記録は捨てる */
+    private static final Duration KEEP = Duration.ofHours(2);
+
+    private final UserRepository userRepository;
+    private final LocationService locationService;
+    private final LocationRepository locationRepository;
+    private final NotificationRepository notificationRepository;
+    private final GroupMemberRepository groupMemberRepository;
+
+    /** 何歩目か。往復と電池残量の両方をこの1つの値から決める */
+    private int step = 0;
+
+    /**
+     * 経路を1歩進める。
+     *
+     * <p>⚠️ 実利用者の送信間隔（30秒）より短くしてある。見学者が地図を開いて いる時間は短く、30秒に1回では「動いていない」と受け取られるため。
+     */
+    @Scheduled(fixedRateString = "${mimamori.demo.movement.interval-ms:15000}")
+    public void move() {
+        userRepository
+                .findByEmail(DEMO_EMAIL)
+                .ifPresentOrElse(
+                        user -> {
+                            Waypoint next = ROUTE.get(indexOf(step));
+
+                            locationService.record(
+                                    user.getId(),
+                                    new LocationRequest(
+                                            next.lat(),
+                                            next.lng(),
+                                            8.0f,
+                                            (short) batteryOf(step),
+                                            next.address()));
+                            step++;
+                        },
+                        // デモデータが入っていない環境。止めるほどのことではない
+                        () -> log.debug("デモ用アカウント {} が見つかりません", DEMO_EMAIL));
+    }
+
+    /**
+     * 何歩目かを経路上の位置に直す。端に着いたら折り返す。
+     *
+     * <p>⚠️ 単純な剰余だと、学校に着いた次の瞬間に自宅へ瞬間移動する。 見た目が壊れるだけでなく、移動速度が異常な値になる。
+     */
+    private static int indexOf(int step) {
+        int lap = ROUTE.size() * 2 - 2; // 往path + 復path（両端は重ねない）
+        int position = step % lap;
+
+        return position < ROUTE.size() ? position : lap - position;
+    }
+
+    /** 1歩ごとに1%減らし、空になったら満充電に戻す（F-08 の通知を見せる） */
+    private static int batteryOf(int step) {
+        int span = BATTERY_FULL - BATTERY_EMPTY;
+
+        return BATTERY_FULL - (step % (span + 1));
+    }
+
+    /**
+     * 古いデモの記録を捨てる。
+     *
+     * <p>⚠️ これが無いと、往復1周ごとに到着・出発の通知が4件たまり続ける。 数日でベルのバッジが桁違いの数字になり、無料枠のDBも埋まる。
+     *
+     * <p>⚠️ 消す対象はデモの家族に限る。実際の利用者の通知を巻き込まない。
+     */
+    @Scheduled(fixedRateString = "${mimamori.demo.movement.prune-ms:900000}")
+    @Transactional
+    public void prune() {
+        userRepository
+                .findByEmail(DEMO_EMAIL)
+                .ifPresent(
+                        demo -> {
+                            Instant before = Instant.now().minus(KEEP);
+
+                            locationRepository.deleteByUserIdAndRecordedAtBefore(
+                                    demo.getId(), before);
+
+                            // 通知の宛先は本人ではなく家族なので、そちらを消す
+                            List<Long> family = groupMemberRepository.findRelatedUserIds(demo.getId());
+                            if (!family.isEmpty()) {
+                                notificationRepository.deleteByUserIdInAndCreatedAtBefore(
+                                        family, before);
+                            }
+                        });
+    }
+
+    /** 経路の1点。住所まで持つのは、端末が送ってくる値と形をそろえるため */
+    private record Waypoint(double lat, double lng, String address) {}
+}

@@ -1,5 +1,6 @@
 package com.mimamori.api.notification;
 
+import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,4 +30,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.user.id = :userId AND n.read = false")
     int markAllRead(@Param("userId") Long userId);
+
+    /**
+     * 指定した人たちの古い通知を消す（デモ用）。
+     *
+     * <p>⚠️ 宛先を絞る。全件を対象にすると、実際の利用者の通知まで巻き込む。
+     */
+    void deleteByUserIdInAndCreatedAtBefore(List<Long> userIds, Instant before);
 }

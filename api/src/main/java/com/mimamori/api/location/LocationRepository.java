@@ -47,4 +47,11 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
                     """,
             nativeQuery = true)
     List<Location> findLatestTwoPerUser(@Param("userIds") Collection<Long> userIds);
+
+    /**
+     * 指定日時より古い記録を消す（デモ用）。
+     *
+     * <p>⚠️ デモの家族は止まらずに歩き続けるので、放っておくと位置履歴だけが 際限なく増える。DemoMovementJob からだけ呼ぶ。
+     */
+    void deleteByUserIdAndRecordedAtBefore(Long userId, Instant before);
 }

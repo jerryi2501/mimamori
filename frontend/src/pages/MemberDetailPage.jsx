@@ -44,8 +44,13 @@ import { useAppStore } from "@/store";
 import { subscribe } from "@/lib/realtime";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
-/** 移動手段ごとのアイコン。※キーの値は大文字始まりにすること（JSXの決まり）*/
-const MOVEMENT_ICON = { walk: Footprints, bike: Bike, car: Car };
+/**
+ * 移動手段ごとのアイコン。※キーの値は大文字始まりにすること（JSXの決まり）
+ *
+ * ⚠️ vehicle に車のアイコンを使うが、文言は「乗り物」。電車もバスも含むので、
+ *   絵は代表として車を借りているだけ。言い切るのは文言のほうに任せる。
+ */
+const MOVEMENT_ICON = { walk: Footprints, bike: Bike, vehicle: Car };
 
 /** 呼び出しの状態ごとの見た目（企画書 §2.3）*/
 const PING_VIEW = {

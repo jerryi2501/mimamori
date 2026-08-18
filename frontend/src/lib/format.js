@@ -53,7 +53,9 @@ export function batteryColor(level) {
 export function movementLabel(movement) {
   if (movement === "walk") return "徒歩";
   if (movement === "bike") return "自転車";
-  if (movement === "car") return "車";
+  // ⚠️ 「車」ではない。速度だけでは電車・バス・車を区別できないため、
+  //   分かる範囲の「乗り物」までにとどめる（Movement.VEHICLE の注記）
+  if (movement === "vehicle") return "乗り物";
   return null;
 }
 /** 曜日の日本語表記。Date.getDay() の 0〜6 に対応する */

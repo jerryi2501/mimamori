@@ -4,6 +4,13 @@
 
 就職活動用のポートフォリオ作品です。技術的な見どころは **WebSocket（STOMP）によるリアルタイム更新** で、誰かが動くと、家族全員の地図がその場で書き換わります。
 
+<p align="center">
+  <img src="docs/screenshots/realtime.gif" width="300"><br>
+  <sub><b>さくらの画面。一度も触れていません。</b><br>
+  ママが動き、わたしがトークを送り、SOS を出す —— すべて別の端末での操作が、<br>
+  WebSocket でこの画面に届いています。最後は SOS 受信画面へ自動で切り替わります。</sub>
+</p>
+
 <table>
   <tr>
     <td align="center" width="25%">

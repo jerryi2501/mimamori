@@ -1,13 +1,16 @@
 /**
- * 逆ジオコーディング（国土地理院）。座標を日本語の住所に直す。
+ * ジオコーディング（国土地理院）。座標と住所を相互に変換する。
  * 出典: docs/02_デザインガイドライン.md 第7章。APIキー不要・無料。
  *
- * ⚠️ 取れなければ null を返す。住所をでっち上げない（CLAUDE.md）。
+ * ⚠️ 取れなければ null / 空を返す。住所をでっち上げない（CLAUDE.md）。
  */
 
 /** 座標 → 市区町村コード + 町名 */
 const REVERSE_URL =
   "https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress";
+
+/** 住所 → 座標（場所の登録で使う） */
+const SEARCH_URL = "https://msearch.gsi.go.jp/address-search/AddressSearch";
 
 /** 市区町村コード → 都道府県名・市区町村名 の対応表 */
 const MUNI_URL = "https://maps.gsi.go.jp/js/muni.js";
@@ -84,5 +87,41 @@ export async function reverseGeocode(lat, lng) {
   } catch {
     // ⚠️ 住所が取れなくてもアプリは動く。位置の送信を巻き添えで失敗させない
     return null;
+  }
+}
+
+/**
+ * 住所から場所を探す（SC-P02 場所の登録）。
+ *
+ * これが無いと、地図を指でずらして目的地まで動かすしかない。自宅が東京、
+ * 地図の初期位置が大阪、という状況では現実的に操作できない。
+ *
+ * ⚠️ これは「住所」の検索であって、施設名の検索ではない。「渋谷駅」で引くと
+ *   駅ではなく、渋谷という地名を含む住所が並ぶ。画面の文言も「住所で検索」に
+ *   そろえて、できないことを期待させない。
+ *
+ * @param {string} query 「東京都新宿区西新宿2-8-1」のような住所
+ * @returns {Promise<Array<{title: string, lat: number, lng: number}>>} 空配列もありうる
+ */
+export async function searchAddress(query) {
+  const keyword = query.trim();
+  if (!keyword) return [];
+
+  try {
+    const response = await fetch(`${SEARCH_URL}?q=${encodeURIComponent(keyword)}`);
+    if (!response.ok) return [];
+
+    const found = await response.json();
+    // ⚠️ 該当が無いとき、配列ではなく null が返ることがある
+    if (!Array.isArray(found)) return [];
+
+    // ⚠️ GeoJSON なので [経度, 緯度] の順。Leaflet の [緯度, 経度] と逆
+    return found.slice(0, 8).map((feature) => {
+      const [lng, lat] = feature.geometry.coordinates;
+      return { title: feature.properties.title, lat, lng };
+    });
+  } catch {
+    // ⚠️ 検索が落ちても登録そのものは続けられる（地図を動かせばよい）
+    return [];
   }
 }

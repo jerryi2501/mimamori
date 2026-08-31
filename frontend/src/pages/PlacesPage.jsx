@@ -14,7 +14,6 @@ import {
   TILE_LIGHT,
   TILE_DARK,
   TILE_ATTRIBUTION,
-  TILE_SUBDOMAINS,
   MAX_ZOOM,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -80,8 +79,8 @@ export default function PlacesPage() {
           <TileLayer
             key={isNight ? "dark" : "light"}
             url={isNight ? TILE_DARK : TILE_LIGHT}
+            className={isNight ? "mm-tiles-dark" : undefined}
             attribution={TILE_ATTRIBUTION}
-            subdomains={TILE_SUBDOMAINS}
             maxZoom={MAX_ZOOM}
           />
 

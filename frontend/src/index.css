@@ -278,6 +278,18 @@ h3 {
   }
 }
 
+/* ===== 夜テーマのタイル =====
+   国土地理院には暗色版の地図が無いので、淡色地図を反転して夜用にする。
+
+   ⚠️ invert だけだと色相まで反転し、川が橙、緑地が紫になる。hue-rotate(180deg)
+      で色相だけ元に戻すと、明暗だけが反転した自然な暗色地図になる。
+   ⚠️ かける先はタイルの層だけ。地図全体にかけると、上に載せたピンや
+      ラベルまで反転して読めなくなる。 */
+
+.mm-tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+}
+
 /* ===== 地図のアバターピン（しずく型） =====
    Leaflet の divIcon に渡す HTML 用のスタイル。
    createMemberIcon()（src/components/map/memberIcon.js）と対で使う。

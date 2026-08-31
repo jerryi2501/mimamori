@@ -14,13 +14,7 @@ import {
   Share2,
   CalendarDays,
 } from "lucide-react";
-import {
-  TILE_LIGHT,
-  TILE_DARK,
-  TILE_ATTRIBUTION,
-  TILE_SUBDOMAINS,
-  MAX_ZOOM,
-} from "@/lib/mapConfig";
+import { TILE_LIGHT, TILE_DARK, TILE_ATTRIBUTION, MAX_ZOOM } from "@/lib/mapConfig";
 import {
   fetchMember,
   sendPing,
@@ -101,7 +95,7 @@ export default function MemberDetailPage() {
   /**
    * 端末の地図アプリで、この人までの経路を開く。
    *
-   * ※ 地図の描画は CARTO だが、経路案内は外部に任せる（企画書 §2.4 の割り切り）。
+   * ※ 地図の描画は国土地理院のタイルだが、経路案内は外部に任せる（企画書 §2.4 の割り切り）。
    *   SosAlertPage と同じやり方。
    *
    * ⚠️ 新しいタブで開き、noopener を付ける。付けないと開いた先から
@@ -205,8 +199,8 @@ export default function MemberDetailPage() {
             <TileLayer
               key={isNight ? "dark" : "light"}
               url={isNight ? TILE_DARK : TILE_LIGHT}
+              className={isNight ? "mm-tiles-dark" : undefined}
               attribution={TILE_ATTRIBUTION}
-              subdomains={TILE_SUBDOMAINS}
               maxZoom={MAX_ZOOM}
             />
             <Marker position={position} icon={createMemberIcon(member)} />

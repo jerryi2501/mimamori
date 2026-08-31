@@ -2,13 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import { ArrowLeft, TriangleAlert, Navigation, Check, MapPin } from "lucide-react";
-import {
-  TILE_LIGHT,
-  TILE_DARK,
-  TILE_ATTRIBUTION,
-  TILE_SUBDOMAINS,
-  MAX_ZOOM,
-} from "@/lib/mapConfig";
+import { TILE_LIGHT, TILE_DARK, TILE_ATTRIBUTION, MAX_ZOOM } from "@/lib/mapConfig";
 import { fetchSosAlert, fetchMembers, fetchMe, respondToSos } from "@/api";
 import { formatLastUpdated } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
@@ -141,7 +135,7 @@ export default function SosAlertPage() {
 
   /**
    * 端末の地図アプリで経路を開く。
-   * ※ 地図の描画は CARTO だが、経路案内は外部に任せる（企画書 §2.4 の割り切り）
+   * ※ 地図の描画は国土地理院のタイルだが、経路案内は外部に任せる（企画書 §2.4 の割り切り）
    */
   const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${alert.lat},${alert.lng}`;
 
@@ -196,8 +190,8 @@ export default function SosAlertPage() {
           <TileLayer
             key={isNight ? "dark" : "light"}
             url={isNight ? TILE_DARK : TILE_LIGHT}
+            className={isNight ? "mm-tiles-dark" : undefined}
             attribution={TILE_ATTRIBUTION}
-            subdomains={TILE_SUBDOMAINS}
             maxZoom={MAX_ZOOM}
           />
           {!isResolved && (

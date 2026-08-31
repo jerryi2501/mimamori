@@ -176,16 +176,24 @@ public class DemoMovementJob {
 
                             // 通知の宛先は本人ではなく家族なので、そちらを消す
                             List<Long> family = groupMemberRepository.findRelatedUserIds(demo.getId());
-                            if (!family.isEmpty()) {
-                                notificationRepository.deleteByUserIdInAndCreatedAtBefore(
-                                        family, before);
+                            if (family.isEmpty()) {
+                                return;
                             }
+                            notificationRepository.deleteByUserIdInAndCreatedAtBefore(family, before);
 
                             // ⚠️ 見学者が SOS を試したあとタブを閉じると、通報は
                             //   ACTIVE のまま残る。解除できるのは発信者だけなので、
                             //   次に開いた人が「進行中の緊急事態」から始まることになる。
-                            //   デモに限り、古い通報は捨てる。
-                            sosAlertRepository.deleteByTriggeredAtBefore(before);
+                            //   デモの家族に限り、古い通報は捨てる。
+                            //
+                            // ⚠️ 対象を必ず絞る。以前は全件を消していた。デモしか
+                            //   居ない間は無害だったが、実際の利用者が登録した瞬間から
+                            //   その人たちの SOS 履歴まで巻き込む壊し方だった。
+                            List<Long> demoFamily = new ArrayList<>(family);
+                            demoFamily.add(demo.getId()); // 発信者がママ自身のこともある
+
+                            sosAlertRepository.deleteByUserIdInAndTriggeredAtBefore(
+                                    demoFamily, before);
                         });
     }
 

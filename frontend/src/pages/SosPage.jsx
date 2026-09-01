@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, MapPin } from "lucide-react";
+import { Bell, Check, MapPin, Users } from "lucide-react";
 import { fetchMembers, sendSos, resolveSos, fetchPlaces } from "@/api";
 import SafePlaceList from "@/components/common/SafePlaceList";
 import { useAppStore } from "@/store";
+import EmptyState from "@/components/common/EmptyState";
 import useCountdown from "@/hooks/useCountdown";
 import useLongPress from "@/hooks/useLongPress";
 
@@ -98,18 +99,46 @@ export default function SosPage() {
     myPosition?.address ??
     (myPosition ? "住所を取得できません" : "位置情報を取得できません");
 
+  const header = (
+    <header className="border-line flex shrink-0 items-center border-b px-4 py-3">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="text-ink-sub text-[15px]"
+      >
+        閉じる
+      </button>
+    </header>
+  );
+
+  /**
+   * ⚠️ グループが無いなら赤いボタンを出さない。
+   *
+   * 送り先が誰も居ないのに「タップすると家族0人へ知らせます」と書いた巨大な
+   * 通報ボタンを置いていた。押しても handleSend が currentGroupId 無しで
+   * 黙って return するだけ——助けを求めたつもりで何も起きない。命に関わる
+   * 画面で、動くように見えて動かないのがいちばん悪い。
+   */
+  if (!currentGroupId || members.length === 0) {
+    return (
+      <div className="bg-surface flex h-svh flex-col">
+        {header}
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <EmptyState
+            Icon={Users}
+            title="まだ通報できません"
+            description="緊急通報は、グループの家族へ届きます。先にグループを作るか、招待コードで参加してください。"
+            actionLabel="グループを作る・参加する"
+            onAction={() => navigate("/groups")}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-surface flex h-svh flex-col">
-      {/* ===== ヘッダー ===== */}
-      <header className="border-line flex shrink-0 items-center border-b px-4 py-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-ink-sub text-[15px]"
-        >
-          閉じる
-        </button>
-      </header>
+      {header}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
         {/* ===== 見出し ===== */}

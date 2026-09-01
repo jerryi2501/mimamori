@@ -10,7 +10,7 @@ import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from "@/lib/mapConfig";
-import { fetchMembers, fetchUnreadCount } from "@/api";
+import { fetchMembers, fetchUnreadCount, fetchGroup } from "@/api";
 import { useAppStore } from "@/store";
 import { subscribe } from "@/lib/realtime";
 import { createMemberIcon } from "@/components/map/memberIcon";
@@ -23,6 +23,7 @@ import MapControls from "@/components/map/MapControls";
  */
 export default function MapPage() {
   const [members, setMembers] = useState([]);
+  const [group, setGroup] = useState(null);
   const [map, setMap] = useState(null);
   const isNight = useAppStore((state) => state.isNight);
   // 未読件数は store に置く。通知画面で既読にしたら、ここも自動で 0 になる
@@ -39,9 +40,13 @@ export default function MapPage() {
     // 登録直後はまだどのグループにも入っていない
     if (!currentGroupId) {
       setMembers([]);
+      setGroup(null);
       return;
     }
     fetchMembers(currentGroupId).then(setMembers);
+    // ⚠️ 見出しは実際のグループ名にする。「家族」と決め打ちしていたが、
+    //   バイト先や友人のグループを開いている人には嘘になる
+    fetchGroup(currentGroupId).then(setGroup);
   }, [currentGroupId]);
 
   // ⭐ リアルタイム（企画書 §6）。家族が動くと、こちらの地図が自動で追いつく
@@ -150,7 +155,7 @@ export default function MapPage() {
 
         {/* 見出し */}
         <div className="flex items-center justify-between px-4 pb-2">
-          <h2 className="text-ink text-base font-bold">家族</h2>
+          <h2 className="text-ink text-base font-bold">{group?.name ?? "グループ"}</h2>
           <button type="button" className="text-brand text-sm font-semibold">
             編集
           </button>

@@ -124,11 +124,16 @@ export default function PlacesPage() {
             <Plus size={18} strokeWidth={2.5} />
             新しい場所を追加
           </button>
-          {/* ⚠️ 場所はグループに属する。グループが無いと登録先が決まらない */}
+          {/* ⚠️ 場所はグループに属する。グループが無いと登録先が決まらないので、
+              押せないボタンの下に理由と行き先を出す */}
           {!currentGroupId && (
-            <p className="text-ink-muted mt-2 text-center text-xs">
-              先にグループを作るか、参加してください
-            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/groups")}
+              className="text-brand mt-2 w-full text-center text-xs font-semibold"
+            >
+              先にグループを作る・参加する
+            </button>
           )}
         </div>
 

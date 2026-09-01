@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, MessageCircle } from "lucide-react";
 import { fetchConversations } from "@/api";
 import { formatChatListTime } from "@/lib/format";
 import { useAppStore } from "@/store";
+import EmptyState from "@/components/common/EmptyState";
 
 /**
  * SC-C01 トーク一覧
@@ -41,12 +42,25 @@ export default function ChatListPage() {
             onClick={() => navigate(`/chat/${conversation.id}`)}
           />
         ))}
-        {/* ⚠️ 行き止まりにしない。グループ未参加だとここに来る */}
+        {/* ⚠️ 行き止まりにしない。グループ未参加だとここに来るので、
+            説明だけでなく次の一手を必ず添える */}
         {conversations.length === 0 && (
-          <li className="text-ink-muted px-4 py-10 text-center text-sm">
-            {currentGroupId
-              ? "トークはまだありません"
-              : "先にグループを作るか、参加してください"}
+          <li>
+            {currentGroupId ? (
+              <EmptyState
+                Icon={MessageCircle}
+                title="トークはまだありません"
+                description="家族がグループに参加すると、ここで話せるようになります。"
+              />
+            ) : (
+              <EmptyState
+                Icon={Users}
+                title="まだグループがありません"
+                description="トークはグループの中でやりとりします。先にグループを作るか、招待コードで参加してください。"
+                actionLabel="グループを作る・参加する"
+                onAction={() => navigate("/groups")}
+              />
+            )}
           </li>
         )}
       </ul>

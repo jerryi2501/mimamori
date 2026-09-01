@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, MapPin } from "lucide-react";
-import { fetchMembers, sendSos, resolveSos } from "@/api";
+import { fetchMembers, sendSos, resolveSos, fetchPlaces } from "@/api";
+import SafePlaceList from "@/components/common/SafePlaceList";
 import { useAppStore } from "@/store";
 import useCountdown from "@/hooks/useCountdown";
 import useLongPress from "@/hooks/useLongPress";
@@ -28,12 +29,15 @@ export default function SosPage() {
   const myPosition = useAppStore((state) => state.myPosition);
 
   const [members, setMembers] = useState([]);
+  const [places, setPlaces] = useState([]);
   const [alert, setAlert] = useState(null); // 発信済みなら中身が入る
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchMembers(currentGroupId).then(setMembers);
+    // 逃げ込める場所の候補に、グループの登録場所（自宅・学校）を混ぜる
+    fetchPlaces(currentGroupId).then(setPlaces);
   }, [currentGroupId]);
 
   const handleSend = useCallback(async () => {
@@ -229,6 +233,15 @@ export default function SosPage() {
             ))}
           </ul>
         </section>
+
+        {/* ===== 逃げ込める場所（発信後だけ）=====
+            ⚠️ 発信してから出す。通報より先に外部への問い合わせを挟むと、
+            危ないから押しているのに送信が待たされることになる。 */}
+        {isActive && (
+          <div className="mt-5">
+            <SafePlaceList position={myPosition} groupPlaces={places} />
+          </div>
+        )}
       </div>
 
       {/* ===== 下部のボタン。状態によって中身が変わる ===== */}

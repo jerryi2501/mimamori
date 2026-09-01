@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import { ArrowLeft, TriangleAlert, Navigation, Check, MapPin } from "lucide-react";
 import { TILE_LIGHT, TILE_DARK, TILE_ATTRIBUTION, MAX_ZOOM } from "@/lib/mapConfig";
-import { fetchSosAlert, fetchMembers, fetchMe, respondToSos } from "@/api";
+import { fetchSosAlert, fetchMembers, fetchMe, respondToSos, fetchPlaces } from "@/api";
 import { formatLastUpdated } from "@/lib/format";
 import { distanceMeters, formatDistance } from "@/lib/geo";
+import SafePlaceList from "@/components/common/SafePlaceList";
 import { createMemberIcon } from "@/components/map/memberIcon";
 import { useAppStore } from "@/store";
 import { subscribe } from "@/lib/realtime";
@@ -25,6 +26,7 @@ export default function SosAlertPage() {
 
   const [alert, setAlert] = useState(null);
   const [members, setMembers] = useState([]);
+  const [places, setPlaces] = useState([]);
   // 距離の計算に使う自分の現在地。me（/api/me）は座標を返さない
   const myPosition = useAppStore((state) => state.myPosition);
 
@@ -36,15 +38,20 @@ export default function SosAlertPage() {
   useEffect(() => {
     let alive = true;
 
-    Promise.all([fetchSosAlert(id), fetchMembers(currentGroupId), fetchMe()]).then(
-      ([foundAlert, foundMembers, foundMe]) => {
-        if (!alive) return;
-        setAlert(foundAlert);
-        setMembers(foundMembers);
-        setMe(foundMe);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      fetchSosAlert(id),
+      fetchMembers(currentGroupId),
+      fetchMe(),
+      // 逃げ込める場所の候補に、グループの登録場所も混ぜる
+      fetchPlaces(currentGroupId),
+    ]).then(([foundAlert, foundMembers, foundMe, foundPlaces]) => {
+      if (!alive) return;
+      setAlert(foundAlert);
+      setMembers(foundMembers);
+      setMe(foundMe);
+      setPlaces(foundPlaces);
+      setLoading(false);
+    });
 
     return () => {
       alive = false;
@@ -215,6 +222,15 @@ export default function SosAlertPage() {
         </p>
 
         {/* 誰が向かっているか。重複して駆けつけるのを防ぐ */}
+        {/* ⚠️ 基準は通報者の位置。受け取った家族の現在地ではない。
+            探すのは「その人がいま逃げ込める場所」であって、こちらの近所ではない。 */}
+        <div className="mt-5">
+          <SafePlaceList
+            position={{ lat: alert.lat, lng: alert.lng }}
+            groupPlaces={places}
+          />
+        </div>
+
         <h2 className="text-ink-sub mt-5 text-xs font-semibold">向かっている人</h2>
         {responders.length === 0 && !iAmGoing ? (
           <p className="text-ink-muted mt-1.5 text-sm">まだ誰も応答していません</p>

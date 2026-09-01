@@ -111,6 +111,27 @@ export default function PlacesPage() {
           )}
         </section>
 
+        {/* ⚠️ 追加ボタンは場所一覧のすぐ下に置く。以前は「ゾーン履歴」の
+            あとに置いていたが、履歴は際限なく伸びるので、登録件数が増えるほど
+            主要な操作が画面外へ押し出されていた（実機で気づいた） */}
+        <div className="px-4 pt-3">
+          <button
+            type="button"
+            onClick={() => navigate("/places/new")}
+            disabled={!currentGroupId}
+            className="bg-brand flex w-full items-center justify-center gap-1.5 rounded-xl py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            新しい場所を追加
+          </button>
+          {/* ⚠️ 場所はグループに属する。グループが無いと登録先が決まらない */}
+          {!currentGroupId && (
+            <p className="text-ink-muted mt-2 text-center text-xs">
+              先にグループを作るか、参加してください
+            </p>
+          )}
+        </div>
+
         {/* ゾーン履歴 */}
         <div className="mt-6 flex items-center justify-between px-5">
           <h2 className="text-ink-sub text-xs font-semibold">ゾーン履歴</h2>
@@ -129,24 +150,6 @@ export default function PlacesPage() {
             </p>
           )}
         </section>
-
-        <div className="px-4 pt-6">
-          <button
-            type="button"
-            onClick={() => navigate("/places/new")}
-            disabled={!currentGroupId}
-            className="bg-brand flex w-full items-center justify-center gap-1.5 rounded-xl py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            新しい場所を追加
-          </button>
-          {/* ⚠️ 場所はグループに属する。グループが無いと登録先が決まらない */}
-          {!currentGroupId && (
-            <p className="text-ink-muted mt-2 text-center text-xs">
-              先にグループを作るか、参加してください
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );

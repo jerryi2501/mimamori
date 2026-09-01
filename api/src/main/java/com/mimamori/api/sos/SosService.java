@@ -5,6 +5,7 @@ import com.mimamori.api.group.GroupRepository;
 import com.mimamori.api.location.Location;
 import com.mimamori.api.location.LocationRepository;
 import com.mimamori.api.notification.NotificationService;
+import com.mimamori.api.notification.NotificationType;
 import com.mimamori.api.realtime.RealtimePublisher;
 import com.mimamori.api.sos.dto.SosRequest;
 import com.mimamori.api.sos.dto.SosResponse;
@@ -83,6 +84,14 @@ public class SosService {
         alert.setStatus(SosStatus.RESOLVED);
         alert.setResolvedAt(Instant.now());
 
+        // ⚠️ 解除も知らせる。発信の通知だけが残ると、家族は「まだ続いている」と
+        //    思ったまま、無事になったことを知る手立てがない
+        notificationService.notifySosUpdate(
+                groupMemberRepository.findMemberIdsExcept(alert.getGroup().getId(), userId),
+                alert.getUser(),
+                alert.getId(),
+                NotificationType.SOS_RESOLVED);
+
         return publish(alert);
     }
 
@@ -106,7 +115,14 @@ public class SosService {
         }
 
         // ⚠️ 応答も配る。これが無いと、誰かが向かっていることが他の人の
-        //    画面に出ず、家族が次々と同じ場所へ駆けつけてしまう
+        //    画面に出ず、家族が次々と同じ場所へ駆けつけてしまう。
+        // ⚠️ 通知も同じ理由で出す。アプリを閉じている人には配信が届かない
+        notificationService.notifySosUpdate(
+                groupMemberRepository.findMemberIdsExcept(alert.getGroup().getId(), userId),
+                userRepository.getReferenceById(userId),
+                alert.getId(),
+                NotificationType.SOS_RESPONDED);
+
         return publish(alert);
     }
 

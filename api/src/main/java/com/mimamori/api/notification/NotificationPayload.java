@@ -20,6 +20,8 @@ final class NotificationPayload {
     static final String PLACE_NAME = "placeName";
     static final String BATTERY_LEVEL = "batteryLevel";
     static final String ALERT_ID = "alertId";
+    /** ⚠️ グループ名は消えたあとも文章に要るので、id ではなく名前を残す */
+    static final String GROUP_NAME = "groupName";
 
     private NotificationPayload() {}
 

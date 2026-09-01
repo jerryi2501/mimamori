@@ -99,4 +99,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             """)
     boolean canViewLocationOf(
             @Param("viewerId") Long viewerId, @Param("targetUserId") Long targetUserId);
+
+    /**
+     * そのグループのオーナーの userId。
+     *
+     * <p>位置共有の切り替えを知らせる宛先に使う（企画書 §1 のとおり、全員には配らない）。
+     */
+    @Query("select gm.user.id from GroupMember gm where gm.group.id = :groupId and gm.role = 'OWNER'")
+    Optional<Long> findOwnerId(@Param("groupId") Long groupId);
 }

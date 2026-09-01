@@ -112,6 +112,12 @@ public class PingService {
             ping.setStatus(PingStatus.NO_RESPONSE);
             // 3分待った親の画面を、開いたままでも「応答なし」に変える
             realtimePublisher.toUser(ping.getFromUser().getId(), "ping", toResponse(ping));
+
+            // ⚠️ 配信だけでは足りない。アプリを閉じた親には何も届かず、
+            //    F-11 がいちばん扱いたい「応答が無い」場面が記録に残らない。
+            // ⚠️ 通知に載せるのは「応答しなかった人」。呼んだ本人ではない
+            notificationService.notifyPingNoResponse(
+                    ping.getFromUser().getId(), ping.getToUser());
         }
 
         return stale.size();

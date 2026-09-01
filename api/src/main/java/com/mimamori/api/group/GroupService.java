@@ -6,6 +6,8 @@ import com.mimamori.api.location.Location;
 import com.mimamori.api.location.LocationService;
 import com.mimamori.api.location.Movement;
 import com.mimamori.api.location.MovementEstimate;
+import com.mimamori.api.notification.NotificationService;
+import com.mimamori.api.notification.NotificationType;
 import com.mimamori.api.place.GeofenceService;
 import com.mimamori.api.place.Place;
 import com.mimamori.api.place.PlaceRepository;
@@ -27,6 +29,7 @@ public class GroupService {
     private final InviteCodeGenerator inviteCodeGenerator;
     private final LocationService locationService;
     private final PlaceRepository placeRepository;
+    private final NotificationService notificationService;
 
     /** SC-G02 グループ作成。作った本人が OWNER になる */
     @Transactional
@@ -106,6 +109,14 @@ public class GroupService {
                         new GroupMember(
                                 group, userRepository.getReferenceById(userId), GroupRole.MEMBER));
 
+        // ⚠️ 宛先は「前からいた人」。findMemberIdsExcept は自分を除くので、
+        //    保存したあとに呼んでも新入りに自分の参加通知は届かない
+        notificationService.notifyGroupEvent(
+                groupMemberRepository.findMemberIdsExcept(group.getId(), userId),
+                loadUser(userId),
+                group.getName(),
+                NotificationType.MEMBER_JOINED);
+
         return toResponse(group, member, (int) groupMemberRepository.countByGroupId(group.getId()));
     }
 
@@ -117,7 +128,16 @@ public class GroupService {
         if (me.getRole() == GroupRole.OWNER) {
             throw new OwnerCannotLeaveException();
         }
+
+        // ⚠️ 宛先とグループ名は消す前に取る。delete したあとでは
+        //    自分がメンバーでなくなり、グループも辿りにくくなる
+        List<Long> others = groupMemberRepository.findMemberIdsExcept(groupId, userId);
+        String groupName = me.getGroup().getName();
+
         groupMemberRepository.delete(me);
+
+        notificationService.notifyGroupEvent(
+                others, loadUser(userId), groupName, NotificationType.MEMBER_LEFT);
     }
 
     /**
@@ -135,7 +155,17 @@ public class GroupService {
         if (me.getRole() != GroupRole.OWNER) {
             throw new NotGroupOwnerException();
         }
+
+        // ⚠️ 必ず消す前に集める。削除後は group_members ごと CASCADE で
+        //    消えていて、誰に知らせるべきかを二度と辿れない
+        List<Long> others = groupMemberRepository.findMemberIdsExcept(groupId, userId);
+        String groupName = me.getGroup().getName();
+
         groupRepository.delete(me.getGroup());
+
+        // ⚠️ グループが消えたあとも文章に名前が要るので、payload に名前を残す
+        notificationService.notifyGroupEvent(
+                others, loadUser(userId), groupName, NotificationType.GROUP_DELETED);
     }
 
     /** SC-G03 オーナーが他人を外す */
@@ -156,7 +186,21 @@ public class GroupService {
                         .findByGroupIdAndUserId(groupId, targetUserId)
                         .orElseThrow(NotGroupMemberException::new);
 
+        List<Long> others = groupMemberRepository.findMemberIdsExcept(groupId, targetUserId);
+        String groupName = target.getGroup().getName();
+
         groupMemberRepository.delete(target);
+
+        User removed = loadUser(targetUserId);
+
+        // 残った人には「誰が外れたか」
+        notificationService.notifyGroupEvent(
+                others, removed, groupName, NotificationType.MEMBER_REMOVED);
+
+        // ⚠️ 外された本人にも知らせる。黙って消えると、相手からは
+        //    アプリが壊れたようにしか見えない（企画書 §1 の「同意の上で」）
+        notificationService.notifyGroupEvent(
+                List.of(targetUserId), removed, groupName, NotificationType.MEMBER_REMOVED);
     }
 
     /** F-03 このグループへの位置共有を切り替える */
@@ -168,7 +212,31 @@ public class GroupService {
         // ⚠️ save() は呼ばなくてよい。@Transactional の中で読んだエンティティは
         //    JPA の管理下にあり、コミット時に差分が自動で UPDATE される
         //    （ダーティチェック）。呼んでも害はないが、無くても動く理由を知っておく
+
+        // ⚠️ 知らせる先はオーナーだけ。全員に配ると「誰が共有を切ったか」が
+        //    家族中に流れ、見守るアプリではなく見張るアプリになる。
+        // ⚠️ 自分がオーナーなら送らない。自分の操作を自分に通知しても意味がない
+        groupMemberRepository
+                .findOwnerId(groupId)
+                .filter(ownerId -> !ownerId.equals(userId))
+                .ifPresent(
+                        ownerId ->
+                                notificationService.notifyShareChanged(
+                                        ownerId,
+                                        loadUser(userId),
+                                        me.getGroup().getName(),
+                                        shareLocation));
+
         return toResponse(me.getGroup(), me, countMembers(me));
+    }
+
+    /**
+     * 通知に載せる名前と色のために実体を読む。
+     *
+     * <p>⚠️ getReferenceById では駄目。proxy のまま payload に入れると、名前も色も 取り出せないまま通知が空になる。
+     */
+    private User loadUser(Long userId) {
+        return userRepository.findById(userId).orElseThrow(NotGroupMemberException::new);
     }
 
     /** 「この人はこのグループのメンバーか？」— 全APIの入口で必ず通す */

@@ -20,4 +20,5 @@ public record NotificationResponse(
         String memberColor,
         String placeName,
         Integer batteryLevel,
-        Long alertId) {}
+        Long alertId,
+        String groupName) {}

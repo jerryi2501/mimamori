@@ -91,6 +91,67 @@ public class NotificationService {
                 NotificationPayload.ofMember(member));
     }
 
+    /**
+     * F-03 グループの出入りを知らせる（参加・退出・削除された・グループ消滅）。
+     *
+     * <p>⚠️ グループ名は id ではなく名前で持つ。グループが消えたあとも 「◯◯が解散しました」と書ける必要があるため。
+     */
+    @Transactional
+    public void notifyGroupEvent(
+            List<Long> recipientIds, User member, String groupName, NotificationType type) {
+
+        Map<String, Object> payload = NotificationPayload.ofMember(member);
+        payload.put(NotificationPayload.GROUP_NAME, groupName);
+
+        notifyAll(recipientIds, type, payload);
+    }
+
+    /**
+     * F-04 SOS のその後（解除された・誰かが向かっている）を知らせる。
+     *
+     * <p>⚠️ 解除の通知が無いと、発信の通知だけが残る。家族は「まだ続いている」と 思ったまま、無事になったことを知る手立てがない。
+     */
+    @Transactional
+    public void notifySosUpdate(
+            List<Long> recipientIds, User member, Long alertId, NotificationType type) {
+
+        Map<String, Object> payload = NotificationPayload.ofMember(member);
+        payload.put(NotificationPayload.ALERT_ID, alertId);
+
+        notifyAll(recipientIds, type, payload);
+    }
+
+    /**
+     * F-11 3分たっても応答が無かったことを、呼び出した人に知らせる。
+     *
+     * <p>⚠️ 宛先は呼び出した本人だけ（notifyPingOk と同じ理由）。 ⚠️ member は「応答しなかった人」。呼んだ人ではない。
+     */
+    @Transactional
+    public void notifyPingNoResponse(Long recipientId, User member) {
+        notifyAll(
+                List.of(recipientId),
+                NotificationType.PING_NO_RESPONSE,
+                NotificationPayload.ofMember(member));
+    }
+
+    /**
+     * F-03 位置共有の切り替えをオーナーに知らせる。
+     *
+     * <p>⚠️ 宛先はオーナーだけ。全員に配ると「誰が共有を切ったか」が家族中に流れ、 見守るアプリではなく見張るアプリになる（企画書 §1 の前提）。
+     *
+     * <p>⚠️ オンに戻したときも知らせる。オフだけ通知すると、オーナーの側には 「切ったまま」という印象だけが残り続ける。
+     */
+    @Transactional
+    public void notifyShareChanged(Long ownerId, User member, String groupName, boolean sharing) {
+        Map<String, Object> payload = NotificationPayload.ofMember(member);
+        payload.put(NotificationPayload.GROUP_NAME, groupName);
+
+        notifyAll(
+                List.of(ownerId),
+                sharing ? NotificationType.SHARE_ON : NotificationType.SHARE_OFF,
+                payload);
+    }
+
     /** F-08 電池が少なくなったことを家族に知らせる */
     @Transactional
     public void notifyLowBattery(List<Long> recipientIds, User member, int batteryLevel) {
@@ -146,6 +207,7 @@ public class NotificationService {
                 NotificationPayload.asString(payload.get(NotificationPayload.MEMBER_COLOR)),
                 NotificationPayload.asString(payload.get(NotificationPayload.PLACE_NAME)),
                 NotificationPayload.asInt(payload.get(NotificationPayload.BATTERY_LEVEL)),
-                NotificationPayload.asLong(payload.get(NotificationPayload.ALERT_ID)));
+                NotificationPayload.asLong(payload.get(NotificationPayload.ALERT_ID)),
+                NotificationPayload.asString(payload.get(NotificationPayload.GROUP_NAME)));
     }
 }

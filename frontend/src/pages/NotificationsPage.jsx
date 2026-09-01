@@ -9,6 +9,15 @@ import {
   CircleCheck,
   CheckCheck,
   Inbox,
+  UserPlus,
+  UserMinus,
+  UserX,
+  Users,
+  ShieldCheck,
+  Footprints,
+  BellOff,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { fetchNotifications, markAllNotificationsRead } from "@/api";
 import { formatTime, formatDateDivider } from "@/lib/format";
@@ -44,6 +53,61 @@ const NOTIFICATION_VIEW = {
     Icon: CircleCheck,
     color: "var(--status-safe)",
     text: (item) => `${item.memberName}が「大丈夫」と応答しました`,
+  },
+
+  // ---- 呼び出し（F-11）----
+  // ⚠️ これがいちばん知らせたい場面。応答が無いまま3分たった
+  ping_no_response: {
+    Icon: BellOff,
+    color: "var(--status-danger)",
+    text: (item) => `${item.memberName}から応答がありません`,
+  },
+
+  // ---- SOS のその後（F-04）----
+  sos_resolved: {
+    Icon: ShieldCheck,
+    color: "var(--status-safe)",
+    text: (item) => `${item.memberName}の緊急通報は解除されました`,
+  },
+  sos_responded: {
+    Icon: Footprints,
+    color: "var(--status-warning)",
+    text: (item) => `${item.memberName}が現場へ向かっています`,
+  },
+
+  // ---- グループの出入り（F-03）----
+  member_joined: {
+    Icon: UserPlus,
+    color: "var(--status-safe)",
+    text: (item) => `${item.memberName}が${item.groupName}に参加しました`,
+  },
+  member_left: {
+    Icon: UserMinus,
+    color: "var(--status-idle)",
+    text: (item) => `${item.memberName}が${item.groupName}から退出しました`,
+  },
+  member_removed: {
+    Icon: UserX,
+    color: "var(--status-idle)",
+    text: (item) => `${item.memberName}が${item.groupName}から外されました`,
+  },
+  group_deleted: {
+    Icon: Users,
+    color: "var(--status-idle)",
+    text: (item) => `${item.groupName}は解散しました`,
+  },
+
+  // ---- 位置共有（F-03）----
+  // ⚠️ オーナーにしか届かない。サーバー側で宛先を絞ってある
+  share_off: {
+    Icon: EyeOff,
+    color: "var(--status-idle)",
+    text: (item) => `${item.memberName}が${item.groupName}での位置共有をオフにしました`,
+  },
+  share_on: {
+    Icon: Eye,
+    color: "var(--status-safe)",
+    text: (item) => `${item.memberName}が${item.groupName}での位置共有をオンにしました`,
   },
 };
 

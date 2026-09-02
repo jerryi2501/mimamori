@@ -48,6 +48,16 @@ const RADIUS_MAX = 1000;
 const SEARCH_DEBOUNCE_MS = 400;
 
 /**
+ * 検索を始める最小の文字数。
+ *
+ * ⚠️ 一文字では投げない。日本語入力では変換前のかなが一度は一文字に
+ *   なるが、地理院に「く」を渡すと全国から61,512件、10MBが返ってくる。
+ *   携帯の回線では致命的で、しかもその結果は誰の役にも立たない。
+ *   二文字あれば「くじ」で0.56MB、「くじょう」で0.26MBまで下がる。
+ */
+const MIN_QUERY_LENGTH = 2;
+
+/**
  * SC-P02 場所登録・編集
  * 地図を動かして中央のピンで位置を決める。半径はスライダー。
  */
@@ -110,8 +120,10 @@ export default function PlaceEditPage() {
       return;
     }
 
+    // ⚠️ 変換前のかなでも引ける（「くじょうえき」→ 九条駅）。だから
+    //   変換の確定を待たずに出す。ただし一文字だけは投げない
     const keyword = query.trim();
-    if (keyword === "") {
+    if (keyword.length < MIN_QUERY_LENGTH) {
       setResults(null);
       setSearching(false);
       return;
@@ -303,8 +315,10 @@ export default function PlaceEditPage() {
           <MapMover target={flyTo} onDone={() => setFlyTo(null)} />
         </MapContainer>
 
-        {/* ===== 場所を探す。⚠️ 地図の外に置く（中だとドラッグを奪う）===== */}
-        <div className="absolute inset-x-3 top-3 z-[1000]">
+        {/* ===== 場所を探す。⚠️ 地図の外に置く（中だとドラッグを奪う）
+               ⚠️ z は地図に乗せる他のUIより1つ上。同じ z-[1000] だと、
+                  あとから描かれる「現在地へ」ボタンが候補の距離を隠す ===== */}
+        <div className="absolute inset-x-3 top-3 z-[1001]">
           <div className="relative">
             <Search
               size={17}
@@ -401,9 +415,13 @@ export default function PlaceEditPage() {
           />
         </div>
 
-        <p className="bg-fab text-ink-sub absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2 rounded-full px-3 py-1 text-[11px] shadow">
-          地図を動かして位置を合わせてください
-        </p>
+        {/* ⚠️ 候補を出している間は引っ込める。候補一覧と同じ z-[1000] で、
+               あとから描かれるこちらが上に乗り、市区町村と距離を隠す */}
+        {results == null && (
+          <p className="bg-fab text-ink-sub absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2 rounded-full px-3 py-1 text-[11px] shadow">
+            地図を動かして位置を合わせてください
+          </p>
+        )}
       </div>
 
       {/* ===== 入力 ===== */}

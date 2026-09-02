@@ -119,16 +119,71 @@ function normalize(text) {
 }
 
 /**
- * 検索語との一致の強さ。小さいほど上に出す。
- * 0=完全一致 / 1=前方一致 / 2=それ以外（部分一致）
+ * 文字の重なりが無い候補への罰点。
+ *
+ * ⚠️ Photon はあいまい一致なので、日本語で打つと平気で無関係なものを
+ *   返す。「東京都新宿区西新宿2-8-1」に対して大阪天満宮や池田泉州銀行が
+ *   並ぶ。近いだけで勝ってしまうので、はっきり下げる。
+ */
+const UNRELATED = 6;
+
+/** 検索語に日本語（かな・漢字）が入っているか */
+function isJapanese(text) {
+  return /[\u3040-\u30FF\u4E00-\u9FFF]/.test(text);
+}
+
+/** 先頭から何文字そろっているか */
+function commonPrefixLength(a, b) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
+}
+
+/**
+ * 検索語との一致の強さ。小さいほど良い。
  */
 function matchRank(title, keyword) {
   const name = normalize(title);
   const word = normalize(keyword);
 
   if (name === word) return 0;
-  if (name.startsWith(word)) return 1;
-  return 2;
+  if (name.startsWith(word)) return 0.5;
+  if (name.includes(word)) return 1;
+
+  // ⚠️ 住所を番地まで打つと完全一致しない。「西新宿2-8-1」に対して
+  //   地理院が返すのは「西新宿二丁目８番」。先頭の重なりで拾う
+  const shared = commonPrefixLength(name, word) / word.length;
+  if (shared >= 0.5) return 2 - shared;
+
+  // ⚠️ ローマ字（kujo → 九条）は文字が重ならなくて当たり前。
+  //   罰すると Photon の翻字がまるごと死ぬので、日本語のときだけ下げる
+  return isJapanese(word) ? UNRELATED : 1.5;
+}
+
+/**
+ * 一致の強さを距離に対してどれだけ重く見るか。
+ *
+ * ⚠️ 名前の一致を絶対の優先にしてはいけない。「小学校」で引くと、
+ *   長野県にある「小学校」という名前のバス停が完全一致で勝ち、
+ *   目の前の〇〇小学校が消える。かといって軽すぎると、遠くの
+ *   正解（住所を打ち込んだ場合）が近所の無関係な地名に負ける。
+ *
+ * 0.8 は「一致が1段階落ちること ≒ 距離が6倍になること」ほどの重み。
+ * 実際の検索語で測って決めた値。
+ */
+const MATCH_WEIGHT = 0.8;
+
+/**
+ * 並べ替えの点数。小さいほど上に出す。
+ *
+ * 距離は対数で効かせる。500m と 1km の差は大きいが、200km と 400km の
+ * 差は「どちらも論外」でしかなく、同じ重みで測るのは正しくない。
+ */
+function score(match, distance) {
+  // 基準が無いときは名前の一致だけで決める
+  if (distance == null) return match * MATCH_WEIGHT;
+
+  return match * MATCH_WEIGHT + Math.log10(1 + distance / 1000);
 }
 
 /**
@@ -233,9 +288,33 @@ async function searchPhoton(keyword, near, signal) {
  * @param {{lat:number,lng:number}|null} near 並びの基準にする地点
  */
 function rank(items, keyword, near) {
+  // ⚠️ 点数は1件につき1回だけ求めて持ち回る。sort の比較関数の中で
+  //   計算すると、18,764件では正規化だけで数十万回走ることになる
+  const scored = items.map((item) => {
+    const distance = near ? distanceMeters(near, item) : null;
+    const match = matchRank(item.title, keyword);
+
+    return { ...item, distance, score: score(match, distance) };
+  });
+
+  // ⚠️ 文字の重なる候補が1つでもあるなら、無関係なものは並べない。
+  //   「東京都新宿区西新宿2-8-1」の下に大阪のバス停やカフェが続くと、
+  //   正解が出ているのに検索が壊れたように見える
+  const related = scored.filter((item) => item.score < UNRELATED * MATCH_WEIGHT);
+  const pool = related.length > 0 ? related : scored;
+
+  // ⚠️ これが肝。これが無いと、大阪で「九条駅」を探しているのに
+  //   北海道の「九条」という地名が先頭に来る
+  pool.sort((a, b) => a.score - b.score);
+
+  // ⚠️ 重複を消すのは「並べ替えた後の上位だけ」。総当たりなので件数の
+  //   2乗に効く。国土地理院は「小学校」に全国18,764件を返してくるため、
+  //   先に消そうとすると3億回の距離計算になり、端末が固まる。
   const unique = [];
 
-  for (const item of items) {
+  for (const item of pool) {
+    if (unique.length >= MAX_RESULTS) break;
+
     // 名前が同じで目と鼻の先にあるなら、同じ場所を両方から拾っただけ。
     // ⚠️ 距離も見る。離れた同名の駅（阪神九条と地下鉄九条）は別物として残す
     const duplicate = unique.some(
@@ -246,20 +325,7 @@ function rank(items, keyword, near) {
     if (!duplicate) unique.push(item);
   }
 
-  return unique
-    .map((item) => ({
-      ...item,
-      // ⚠️ 基準が無いときは null。0 を入れると並びが狂う
-      distance: near ? distanceMeters(near, item) : null,
-    }))
-    .sort((a, b) => {
-      const byMatch = matchRank(a.title, keyword) - matchRank(b.title, keyword);
-      if (byMatch !== 0) return byMatch;
-
-      // ⚠️ ここが肝。名前の一致が同じなら近い順にする。これが無いと
-      //   大阪で「九条駅」を探しているのに北海道が先頭に来る
-      return (a.distance ?? 0) - (b.distance ?? 0);
-    });
+  return unique;
 }
 
 /**
@@ -289,5 +355,5 @@ export async function searchPlaces(query, { near = null, signal } = {}) {
     ...(osm.status === "fulfilled" ? osm.value : []),
   ];
 
-  return rank(merged, keyword, near).slice(0, MAX_RESULTS);
+  return rank(merged, keyword, near);
 }

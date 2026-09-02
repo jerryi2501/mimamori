@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from "react-leaflet";
 import {
@@ -10,8 +10,10 @@ import {
   Trash2,
   Search,
   LocateFixed,
+  Loader2,
+  X,
 } from "lucide-react";
-import { searchAddress } from "@/lib/geocode";
+import { searchPlaces } from "@/lib/geocode";
 import {
   TILE_LIGHT,
   TILE_DARK,
@@ -36,6 +38,14 @@ const CATEGORIES = [
 /** 半径の範囲。狭すぎるとGPS誤差で誤検知する（企画書 §2.4）*/
 const RADIUS_MIN = 50;
 const RADIUS_MAX = 1000;
+
+/**
+ * 打ち終わってから検索するまでの待ち時間。
+ *
+ * ⚠️ 一文字ごとに投げない。提供元は無料の公共サービスで、
+ *   礼儀としても実用としても、押しっぱなしで叩く相手ではない。
+ */
+const SEARCH_DEBOUNCE_MS = 400;
 
 /**
  * SC-P02 場所登録・編集
@@ -65,10 +75,24 @@ export default function PlaceEditPage() {
   const [error, setError] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // ---- 住所検索 ----
+  // ---- 場所の検索 ----
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(null); // null=未検索, []=該当なし
   const [searching, setSearching] = useState(false);
+
+  /**
+   * 並び順の基準にする地点＝地図の中心。
+   *
+   * ⚠️ center をそのまま useEffect の依存に入れてはいけない。指で少し
+   *   動かすたびに検索がやり直される。読みたいのは「今どこか」だけ。
+   */
+  const centerRef = useRef(center);
+  useEffect(() => {
+    centerRef.current = center;
+  }, [center]);
+
+  /** 候補を選んだ直後の setQuery で、同じ検索が走り候補が開き直すのを防ぐ */
+  const skipNextSearch = useRef(false);
 
   /**
    * 地図を飛ばす先。設定すると MapMover が一度だけ動かす。
@@ -78,24 +102,53 @@ export default function PlaceEditPage() {
    */
   const [flyTo, setFlyTo] = useState(null);
 
-  const handleSearch = async (event) => {
-    event.preventDefault();
-    setSearching(true);
-
-    const found = await searchAddress(query);
-    setResults(found);
-    setSearching(false);
-
-    // 1件だけなら選ばせる意味がないので、そのまま飛ぶ
-    if (found.length === 1) {
-      setFlyTo([found[0].lat, found[0].lng]);
-      setResults(null);
+  /** 打っている間に候補を出す。押し直しを待たせない */
+  useEffect(() => {
+    // 選んだ直後は、その名前でもう一度検索しない
+    if (skipNextSearch.current) {
+      skipNextSearch.current = false;
+      return;
     }
-  };
+
+    const keyword = query.trim();
+    if (keyword === "") {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      const [lat, lng] = centerRef.current;
+      const found = await searchPlaces(keyword, {
+        near: { lat, lng },
+        signal: controller.signal,
+      });
+
+      // ⚠️ 打ち直しで捨てられた検索。遅れて戻ってきた古い結果で
+      //   今の候補を上書きしない
+      if (controller.signal.aborted) return;
+
+      setResults(found);
+      setSearching(false);
+    }, SEARCH_DEBOUNCE_MS);
+
+    // 次の一文字が来たら、待ち時間も通信も破棄する
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
 
   const pick = (place) => {
     setFlyTo([place.lat, place.lng]);
     setResults(null);
+
+    // ⚠️ 同じ文字列なら state は変わらず useEffect も動かない。
+    //   ここで旗を立てると、次に打った一文字が食べられてしまう
+    if (place.title !== query) skipNextSearch.current = true;
     setQuery(place.title);
   };
 
@@ -250,31 +303,47 @@ export default function PlaceEditPage() {
           <MapMover target={flyTo} onDone={() => setFlyTo(null)} />
         </MapContainer>
 
-        {/* ===== 住所で探す。⚠️ 地図の外に置く（中だとドラッグを奪う）===== */}
+        {/* ===== 場所を探す。⚠️ 地図の外に置く（中だとドラッグを奪う）===== */}
         <div className="absolute inset-x-3 top-3 z-[1000]">
-          <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative">
+            <Search
+              size={17}
+              strokeWidth={2}
+              className="text-ink-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
+            />
             <input
-              type="search"
+              type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="住所で検索（例: 東京都新宿区西新宿2-8-1）"
-              className="bg-fab text-ink border-fab-line shadow-float min-w-0 flex-1 rounded-full border px-4 py-2.5 text-sm backdrop-blur-md"
+              placeholder="住所や場所名で検索（例: 九条駅）"
+              className="bg-fab text-ink border-fab-line placeholder:text-ink-muted shadow-float w-full rounded-full border py-2.5 pr-10 pl-10 text-sm backdrop-blur-md"
             />
-            <button
-              type="submit"
-              aria-label="検索"
-              disabled={searching || !query.trim()}
-              className="bg-brand shadow-float flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white disabled:opacity-40"
-            >
-              <Search size={18} strokeWidth={2.2} />
-            </button>
-          </form>
 
-          {/* 候補。⚠️ 1件だけのときは出さずに直接飛ぶ（handleSearch）
-              ⚠️ 高さを抑えて中でスクロールさせる。候補は8件出ることがあり、
+            {/* 探している最中と、消せることを同じ場所で示す */}
+            {searching ? (
+              <Loader2
+                size={16}
+                strokeWidth={2.2}
+                className="text-ink-muted absolute top-1/2 right-3.5 -translate-y-1/2 animate-spin"
+              />
+            ) : (
+              query !== "" && (
+                <button
+                  type="button"
+                  aria-label="検索語を消す"
+                  onClick={() => setQuery("")}
+                  className="text-ink-muted absolute top-1/2 right-2.5 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full"
+                >
+                  <X size={16} strokeWidth={2.2} />
+                </button>
+              )
+            )}
+          </div>
+
+          {/* 候補。⚠️ 高さを抑えて中でスクロールさせる。8件出ることがあり、
                  そのまま並べると地図の外へはみ出し、名前欄と種類ボタンを覆う */}
           {results != null && (
-            <div className="bg-surface shadow-float mt-2 max-h-44 overflow-y-auto rounded-xl">
+            <div className="bg-surface shadow-float mt-2 max-h-52 overflow-y-auto rounded-xl">
               {results.length === 0 ? (
                 <p className="text-ink-sub px-4 py-3 text-sm">
                   見つかりませんでした。地図を動かして合わせることもできます
@@ -282,12 +351,29 @@ export default function PlaceEditPage() {
               ) : (
                 results.map((place) => (
                   <button
-                    key={`${place.lat},${place.lng}`}
+                    key={`${place.title}@${place.lat},${place.lng}`}
                     type="button"
                     onClick={() => pick(place)}
-                    className="border-line text-ink block w-full border-b px-4 py-3 text-left text-sm last:border-b-0"
+                    className="border-line flex w-full items-center gap-3 border-b px-4 py-2.5 text-left last:border-b-0"
                   >
-                    {place.title}
+                    {/* ⚠️ min-w-0 が無いと truncate が効かず、長い住所で行が伸びる */}
+                    <span className="min-w-0 flex-1">
+                      <span className="text-ink block truncate text-sm">
+                        {place.title}
+                      </span>
+                      {place.subtitle !== "" && (
+                        <span className="text-ink-muted block truncate text-xs">
+                          {place.subtitle}
+                        </span>
+                      )}
+                    </span>
+
+                    {/* ⚠️ 同名の駅や店が並ぶ。距離だけが見分ける手がかりになる */}
+                    {place.distance != null && (
+                      <span className="text-ink-muted shrink-0 text-xs tabular-nums">
+                        {formatDistance(place.distance)}
+                      </span>
+                    )}
                   </button>
                 ))
               )}

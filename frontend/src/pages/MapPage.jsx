@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import { Bell, Plus, Settings } from "lucide-react";
 import {
   TILE_LIGHT,
@@ -13,7 +13,7 @@ import {
 import { fetchMembers, fetchUnreadCount, fetchGroup } from "@/api";
 import { useAppStore } from "@/store";
 import { subscribe } from "@/lib/realtime";
-import { createMemberIcon } from "@/components/map/memberIcon";
+import { createMemberIcon, createMyLocationIcon } from "@/components/map/memberIcon";
 import MemberList from "@/components/map/MemberList";
 import MapControls from "@/components/map/MapControls";
 
@@ -30,6 +30,9 @@ export default function MapPage() {
   const unread = useAppStore((state) => state.unreadCount);
   const setUnreadCount = useAppStore((state) => state.setUnreadCount);
   const currentGroupId = useAppStore((state) => state.currentGroupId);
+  // ⚠️ 端末の GPS。サーバーの members とは別物で、グループ未参加でも入る
+  const myPosition = useAppStore((state) => state.myPosition);
+  const user = useAppStore((state) => state.user);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -67,6 +70,18 @@ export default function MapPage() {
   /** ピンまたは一覧の行から SC-M02 メンバー詳細へ移動する */
   const openMember = (id) => navigate(`/member/${id}`);
 
+  /**
+   * 地図に出すメンバー。自分の現在地が取れているときは自分を外す。
+   *
+   * ⚠️ 外さないと、同じ人が2つ出る。サーバー由来のピン（最大30秒古い）と
+   *   端末由来の点が少しずれた場所に並び、どちらが本当か分からなくなる。
+   * ⚠️ GPS が取れていないときは外さない。そのときはサーバーの位置だけが
+   *   自分の居場所を示す唯一の手がかりになる。
+   */
+  const mapMembers = myPosition
+    ? members.filter((member) => member.id !== user?.id)
+    : members;
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* ===== 背景の地図 ===== */}
@@ -88,7 +103,7 @@ export default function MapPage() {
         {/* ⚠️ 共有オフ・位置未送信の人は lat/lng が null。そのまま Marker に
             渡すと Leaflet が例外を投げ、地図ごと真っ白になる。
             一覧のほうには「共有オフ」として残す（隠さない）。 */}
-        {members
+        {mapMembers
           .filter((member) => member.lat != null && member.lng != null)
           .map((member) => (
             <Marker
@@ -98,6 +113,19 @@ export default function MapPage() {
               eventHandlers={{ click: () => openMember(member.id) }}
             />
           ))}
+
+        {/* ⚠️ 自分は端末の GPS から描く。サーバーの一覧を待たないので、
+            グループに入っていない登録直後でも「今ここ」が分かる */}
+        {myPosition && (
+          <Marker
+            position={[myPosition.lat, myPosition.lng]}
+            icon={createMyLocationIcon()}
+            // 家族のピンより下。重なったとき相手が隠れないようにする
+            zIndexOffset={-1000}
+          />
+        )}
+
+        <FollowMyFirstPosition position={myPosition} />
       </MapContainer>
 
       {/* ===== トップバー（地図の上に重ねる） ===== */}
@@ -142,6 +170,7 @@ export default function MapPage() {
 
       <MapControls
         map={map}
+        myPosition={myPosition}
         onOpenChat={() => navigate("/chat")}
         onSos={() => navigate("/sos")}
       />
@@ -184,4 +213,26 @@ export default function MapPage() {
       </section>
     </div>
   );
+}
+
+/**
+ * 現在地が初めて取れたとき、地図をそこへ寄せる。
+ *
+ * ⚠️ 「初めて」だけ。毎回寄せると、家族のピンを見ようと動かした地図が
+ *   30秒ごとに自分の位置へ引き戻され、操作できなくなる。
+ * ⚠️ MapContainer の center は初回の描画にしか効かない。GPS は数秒
+ *   遅れて来るので、そちらに書いても大阪の初期値のまま動かない。
+ */
+function FollowMyFirstPosition({ position }) {
+  const map = useMap();
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (!position || done.current) return;
+
+    done.current = true;
+    map.setView([position.lat, position.lng], DEFAULT_ZOOM);
+  }, [position, map]);
+
+  return null;
 }

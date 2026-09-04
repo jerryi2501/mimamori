@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import L from "leaflet";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Circle,
+  Marker,
+  useMapEvents,
+  useMap,
+} from "react-leaflet";
 import {
   ArrowLeft,
   House,
@@ -56,6 +64,17 @@ const SEARCH_DEBOUNCE_MS = 400;
  *   二文字あれば「くじ」で0.56MB、「くじょう」で0.26MBまで下がる。
  */
 const MIN_QUERY_LENGTH = 2;
+
+/**
+ * ドラッグ直後のこの時間内に来た click は、地図を流した余韻として捨てる。
+ *
+ * ⚠️ 保険であって、確認できた不具合への対処ではない。手元の Chromium では
+ *   Leaflet 自身が抑えていて、この判定は素通りする。それでも残すのは、
+ *   利用者が実際に使うのは iOS Safari で、そこを手元で試せていないため。
+ *   「流しただけで位置が変わる」のは今回直した不便そのものなので、
+ *   取りこぼしたときの損が大きい。
+ */
+const DRAG_CLICK_GUARD_MS = 300;
 
 /**
  * SC-P02 場所登録・編集
@@ -155,6 +174,9 @@ export default function PlaceEditPage() {
   }, [query]);
 
   const pick = (place) => {
+    // ⚠️ ピンも動かす。地図を動かすだけだと、画面は目的地を映しているのに
+    //   登録される座標は前のままになる（中心を見るのをやめたため）
+    setCenter([place.lat, place.lng]);
     setFlyTo([place.lat, place.lng]);
     setResults(null);
 
@@ -311,7 +333,23 @@ export default function PlaceEditPage() {
             }}
           />
 
-          <CenterWatcher onMove={setCenter} />
+          {/* ⚠️ 位置を持つのはこのピン。地図の中心ではない。
+              以前は画面の中央に点を貼り付け、地図を動かすたびに中心の座標を
+              拾っていた。指で少しずらすだけで登録先が変わってしまい、
+              周りを見ようとしただけで位置が狂う。 */}
+          <Marker
+            position={center}
+            draggable
+            icon={createPinIcon(color)}
+            eventHandlers={{
+              dragend: (event) => {
+                const { lat, lng } = event.target.getLatLng();
+                setCenter([lat, lng]);
+              },
+            }}
+          />
+
+          <MapTapper onPick={setCenter} />
           <MapMover target={flyTo} onDone={() => setFlyTo(null)} />
         </MapContainer>
 
@@ -407,19 +445,11 @@ export default function PlaceEditPage() {
           </button>
         )}
 
-        {/* 中央固定のピン。⚠️ 地図の外に置く。中に入れるとドラッグを邪魔する */}
-        <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center">
-          <span
-            className="block h-4 w-4 rounded-full border-4 border-white shadow-md"
-            style={{ background: color }}
-          />
-        </div>
-
         {/* ⚠️ 候補を出している間は引っ込める。候補一覧と同じ z-[1000] で、
                あとから描かれるこちらが上に乗り、市区町村と距離を隠す */}
         {results == null && (
           <p className="bg-fab text-ink-sub absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2 rounded-full px-3 py-1 text-[11px] shadow">
-            地図を動かして位置を合わせてください
+            ピンをドラッグ、または地図をタップで移動
           </p>
         )}
       </div>
@@ -534,8 +564,7 @@ export default function PlaceEditPage() {
  * ⚠️ target を消費したら onDone で親に知らせ、null に戻してもらう。
  *   残したままだと、そのあと指で地図を動かすたびに元の地点へ引き戻される。
  *
- * ⚠️ 動かすのは地図だけでよい。moveend が起きて CenterWatcher が
- *   中央の座標を拾うので、保存される位置は自動的に追随する。
+ * ⚠️ 動かすのは地図だけ。ピンの位置は pick() が別に設定する。
  */
 function MapMover({ target, onDone }) {
   const map = useMap();
@@ -551,18 +580,46 @@ function MapMover({ target, onDone }) {
 }
 
 /**
- * 地図が動き終わるたびに、中央の座標を親へ渡す。
+ * 地図をタップした場所へピンを移す。
  *
+ * ドラッグでは遠くへ運びにくいので、離れた場所はタップで飛ばせるようにする。
+ *
+ * ⚠️ move ではなく click。地図を動かしただけでは位置を変えない。
  * useMapEvents は「MapContainer の中」でしか使えないので、
  * FitBounds と同じくこういう子コンポーネントにする。
  */
-function CenterWatcher({ onMove }) {
-  const map = useMapEvents({
-    moveend: () => {
-      const { lat, lng } = map.getCenter();
-      onMove([lat, lng]);
+function MapTapper({ onPick }) {
+  const lastDragEnd = useRef(0);
+
+  useMapEvents({
+    dragend: () => {
+      lastDragEnd.current = Date.now();
+    },
+    click: (event) => {
+      // 流した直後の click は捨てる（DRAG_CLICK_GUARD_MS の注記を参照）
+      if (Date.now() - lastDragEnd.current < DRAG_CLICK_GUARD_MS) return;
+
+      const { lat, lng } = event.latlng;
+      onPick([lat, lng]);
     },
   });
 
   return null;
+}
+
+/**
+ * 登録する場所に刺すピン。種類の色で塗る。
+ *
+ * ⚠️ divIcon は HTML 文字列なので、ここだけは style を直接書く（設計ルール）。
+ *   色はデータ（種類）で決まるため、utility class では表せない。
+ */
+function createPinIcon(color) {
+  return L.divIcon({
+    html: `<div class="mm-place-pin"><span style="background:${color}"></span></div>`,
+    className: "",
+    // ⚠️ 見た目の点は20pxだが、当たり判定は44px取る。指で掴む相手なので、
+    //   点の大きさに合わせるとつまめない（Apple の指針も44pt）
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
 }

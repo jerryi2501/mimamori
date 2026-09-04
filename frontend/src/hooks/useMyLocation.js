@@ -97,19 +97,26 @@ export default function useMyLocation() {
       if (now - lastSentAt.current < PING_INTERVAL_NORMAL) return;
       lastSentAt.current = now;
 
-      const address = await addressIfMoved(lat, lng);
-      if (!alive) return;
-
-      // ⚠️ 送信より先に手元へ反映する。距離の表示（SC-M02）と SOS の発信は
-      //   サーバーの応答を待つ理由が無い。通信が失敗しても現在地は現在地。
+      // ⚠️ 座標が取れた瞬間に手元へ反映する。住所も送信も待たない。
+      //   距離の表示（SC-M02）と SOS の発信はサーバーの応答を待つ理由が無いし、
+      //   逆ジオコーディングは初回に muni.js（110KB）の取得を伴って数秒かかる。
+      //   その間ずっと地図に自分が出ないと、GPS が効いていないように見える。
       setMyPosition({
         lat,
         lng,
         accuracy,
-        address: address ?? lastGeocoded.current?.address ?? null,
+        address: lastGeocoded.current?.address ?? null,
         at: now,
       });
       setLocationError(null);
+
+      const address = await addressIfMoved(lat, lng);
+      if (!alive) return;
+
+      // 住所は取れてから足す。取れなくても座標はもう入っている
+      if (address) {
+        setMyPosition({ lat, lng, accuracy, address, at: now });
+      }
 
       try {
         await sendLocation({
